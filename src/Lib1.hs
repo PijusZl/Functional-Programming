@@ -43,3 +43,5 @@ toggle (State l) t = State $ ("Toggle " ++ show t) : l
 -- Adds hint data to the game state
 hint :: State -> Document -> State
 hint (State l) h = State $ ("Hint " ++ show h) : l
+
+-- pridetas
