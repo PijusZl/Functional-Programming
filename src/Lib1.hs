@@ -10,8 +10,12 @@ import Types
 -- number of occupied rows/cols, hints, occupied cells,..
 -- You can change the right hand side as you wish but please
 -- keep the type name as is
-data State = State [String]
-    deriving Show
+data State = State {
+                    rows :: [Int],
+                    cols :: [Int],
+                    ships :: [((Int, Int), Bool)]
+                   }
+                    deriving Show
 
 -- IMPLEMENT
 -- This is very initial state of your program
