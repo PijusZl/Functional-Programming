@@ -31,7 +31,12 @@ render = show
 -- IMPLEMENT
 -- Make check from current state
 mkCheck :: State -> Check
-mkCheck _ = Check []
+mkCheck (State _ _ s) = Check (extractShips s)
+--extract coordinates of the ships array where they have been toggled(true)
+extractShips :: [((Int, Int), Bool)] -> [Coord]
+extractShips [] = []
+extractShips (((col, row), True):xs) = Coord{col = col, row = row} : extractShips xs
+extractShips (((col, row), _):xs) = extractShips xs
 
 -- IMPLEMENT
 -- Toggle state's value
