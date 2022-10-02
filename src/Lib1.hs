@@ -92,8 +92,8 @@ mkCheck (State _ _ s) = Check (extractShips s)
 -- Extract coordinates of the ships array where they have been toggled(true)
 extractShips :: [((Int, Int), Bool)] -> [Coord]
 extractShips [] = []
-extractShips (((col, row), True):xs) = Coord{col = col, row = row} : extractShips xs
-extractShips (((col, row), _):xs) = extractShips xs
+extractShips (((c, r), True):xs) = Coord{col = c, row = r} : extractShips xs
+extractShips (((_, _), _):xs) = extractShips xs
 
 -- Toggle state's value
 -- Receive raw user input tokensu
