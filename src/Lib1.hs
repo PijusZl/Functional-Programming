@@ -99,9 +99,9 @@ extractShips (((col, row), _):xs) = extractShips xs
 -- Receive raw user input tokensu
 toggle :: State -> [String] -> State
 toggle (State c r s) [] = State {cols = c, rows = r, ships = s}
-toggle (State c r s) coords = State {cols = c, rows = r, ships = toggleShips s coords}
+toggle (State c r s) coords = State {cols = c, rows = r, ships = toggleShips s coords}  
 
-toggleShips :: [((Int, Int), Bool)] -> [String] -> [((Int, Int), Bool)]
+toggleShips :: [((Int, Int), Bool)] -> [String] -> [((Int, Int), Bool)] 
 toggleShips [] _ = []
 toggleShips s [] = s
 toggleShips (x : xs) c = searchKey x c : toggleShips xs c
@@ -120,10 +120,42 @@ toCoords :: String -> (Int, Int)
 toCoords [] = (-1, -1)
 toCoords (x : xs) =
     if (length xs) == 1
-        then (digitToInt x, read xs)
+        then (digitToInt x, read xs) 
     else (-1, -1)
 
 -- IMPLEMENT
 -- Adds hint data to the game state
+
+-- Not converting to string and reading straight from Document is more practical for programming hints
+
 hint :: State -> Document -> State
-hint (State c r s) h = State {cols = c, rows = r, ships = s}
+hint (State c r s) (DMap ((x , (DList documents)) : xs)) = State {cols = c, rows = r, ships = toggleHints s (dListToIntArray documents) } -- turi grazint ship'us
+
+-- Algorithm finds the ship that is in location given by the document (example: [(\"col\",DInteger 5),(\"row\",DInteger 6)])
+-- and changes the bool value that represents visibility to True
+
+toggleHints :: [((Int, Int), Bool)] -> [(Int, Int)] -> [((Int, Int), Bool)]
+toggleHints [] _ = []
+toggleHints s [] = s
+toggleHints (x : xs) l = toggleOneHint x l : toggleHints xs l
+
+toggleOneHint :: ((Int, Int), Bool) -> [(Int, Int)] -> ((Int, Int), Bool)
+toggleOneHint s [] = s
+toggleOneHint (s, b) (x : xs)
+    | (s == x) = (s, True)
+    | (s /= x) = toggleOneHint (s, b) xs
+
+dListToIntArray :: [Document] -> [(Int, Int)]
+dListToIntArray x = map((convertToInt $ pullMapValues "col" x, convertToInt $ pullMapValues "row" x))
+
+convertToInt :: Document -> Int
+convertToInt (DInteger i) = i
+
+pullMapValues :: String -> Document -> Document
+pullMapValues key (DMap map) = valueByKey key map -- gauna DInteger
+
+valueByKey :: String -> [(String, Document)] -> Document
+valueByKey key [] = DNull
+valueByKey key (x:xs) = if fst x == key
+    then snd x
+    else valueByKey key xs
