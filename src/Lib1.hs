@@ -130,6 +130,7 @@ toCoords (x : xs) =
 
 hint :: State -> Document -> State
 hint (State c r s) (DMap ((_ , (DList documents)) : _)) = State {cols = c, rows = r, ships = toggleHints s (dListToIntArray documents) } -- turi grazint ship'us
+hint s _ = s
 
 -- Algorithm finds the ship that is in location given by the document (example: [(\"col\",DInteger 5),(\"row\",DInteger 6)])
 -- and changes the bool value that represents visibility to True
@@ -150,9 +151,13 @@ dListToIntArray = map(\x -> (convertToInt $ pullMapValues "col" x, convertToInt 
 
 convertToInt :: Document -> Int
 convertToInt (DInteger i) = i
+convertToInt _ = 0
 
 pullMapValues :: String -> Document -> Document
 pullMapValues key (DMap theMap) = valueByKey key theMap -- gauna DInteger
+pullMapValues [] d = d
+pullMapValues(_:_) d = d
+
 
 valueByKey :: String -> [(String, Document)] -> Document
 valueByKey _ [] = DNull
