@@ -129,7 +129,7 @@ toCoords (x : xs) =
 -- Not converting to string and reading straight from Document is more practical for programming hints
 
 hint :: State -> Document -> State
-hint (State c r s) (DMap ((x , (DList documents)) : xs)) = State {cols = c, rows = r, ships = toggleHints s (DlistToIntArray documents) } -- turi grazint ship'us
+hint (State c r s) (DMap ((x , (DList documents)) : xs)) = State {cols = c, rows = r, ships = toggleHints s (dListToIntArray documents) } -- turi grazint ship'us
 
 -- Algorithm finds the ship that is in location given by the document (example: [(\"col\",DInteger 5),(\"row\",DInteger 6)])
 -- and changes the bool value that represents visibility to True
@@ -137,16 +137,16 @@ hint (State c r s) (DMap ((x , (DList documents)) : xs)) = State {cols = c, rows
 toggleHints :: [((Int, Int), Bool)] -> [(Int, Int)] -> [((Int, Int), Bool)]
 toggleHints [] _ = []
 toggleHints s [] = s
-toggleHints (x : xs) l = ToggleOneHint x l : toggleHints xs l
+toggleHints (x : xs) l = toggleOneHint x l : toggleHints xs l
 
-ToggleOneHint :: ((Int, Int), Bool) -> [(Int, Int)] -> ((Int, Int), Bool)
-ToggleOneHint s [] = s
-ToggleOneHint (s, b) (x : xs)
+toggleOneHint :: ((Int, Int), Bool) -> [(Int, Int)] -> ((Int, Int), Bool)
+toggleOneHint s [] = s
+toggleOneHint (s, b) (x : xs)
     | (s == x) = (s, True)
-    | (s /= x) = ToggleOneHint (s, b) xs
+    | (s /= x) = toggleOneHint (s, b) xs
 
-DlistToIntArray :: [Document] -> [(Int, Int)]
-DlistToIntArray x = map((convertToInt $ pullMapValues "col" x, convertToInt $ pullMapValues "row" x))
+dListToIntArray :: [Document] -> [(Int, Int)]
+dListToIntArray x = map((convertToInt $ pullMapValues "col" x, convertToInt $ pullMapValues "row" x))
 
 convertToInt :: Document -> Int
 convertToInt (DInteger i) = i
