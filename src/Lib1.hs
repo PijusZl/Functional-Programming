@@ -129,7 +129,7 @@ toCoords (x : xs) =
 -- Not converting to string and reading straight from Document is more practical for programming hints
 
 hint :: State -> Document -> State
-hint (State c r s) (DMap ((x , (DList documents)) : xs)) = State {cols = c, rows = r, ships = toggleHints s (dListToIntArray documents) } -- turi grazint ship'us
+hint (State c r s) (DMap ((_ , (DList documents)) : _)) = State {cols = c, rows = r, ships = toggleHints s (dListToIntArray documents) } -- turi grazint ship'us
 
 -- Algorithm finds the ship that is in location given by the document (example: [(\"col\",DInteger 5),(\"row\",DInteger 6)])
 -- and changes the bool value that represents visibility to True
@@ -152,10 +152,10 @@ convertToInt :: Document -> Int
 convertToInt (DInteger i) = i
 
 pullMapValues :: String -> Document -> Document
-pullMapValues key (DMap map) = valueByKey key map -- gauna DInteger
+pullMapValues key (DMap theMap) = valueByKey key theMap -- gauna DInteger
 
 valueByKey :: String -> [(String, Document)] -> Document
-valueByKey key [] = DNull
+valueByKey _ [] = DNull
 valueByKey key (x:xs) = if fst x == key
     then snd x
     else valueByKey key xs
