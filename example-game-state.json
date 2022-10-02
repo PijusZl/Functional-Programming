@@ -1,0 +1,8 @@
+[
+	"Hint DMap [(\"coords\",DList [DMap [(\"col\",DInteger 5),(\"row\",DInteger 6)],DMap [(\"col\",DInteger 4),(\"row\",DInteger 6)],DMap [(\"col\",DInteger 3),(\"row\",DInteger 6)],DMap [(\"col\",DInteger 2),(\"row\",DInteger 6)],DMap [(\"col\",DInteger 2),(\"row\",DInteger 4)],DMap [(\"col\",DInteger 2),(\"row\",DInteger 3)],DMap [(\"col\",DInteger 2),(\"row\",DInteger 2)],DMap [(\"col\",DInteger 4),(\"row\",DInteger 4)],DMap [(\"col\",DInteger 4),(\"row\",DInteger 3)],DMap [(\"col\",DInteger 4),(\"row\",DInteger 2)]])]",
+	"Toggle [\"a2\"]",
+	"Hint DMap [(\"coords\",DList [DMap [(\"col\",DInteger 5),(\"row\",DInteger 6)],DMap [(\"col\",DInteger 4),(\"row\",DInteger 6)]])]",
+	"Hint DMap [(\"coords\",DList [DMap [(\"col\",DInteger 5),(\"row\",DInteger 6)]])]",
+	"Game started: DMap [(\"number_of_hints\",DInteger 10),(\"occupied_cols\",DMap [(\"head\",DInteger 0),(\"tail\",DMap [(\"head\",DInteger 2),(\"tail\",DMap [(\"head\",DInteger 4),(\"tail\",DMap [(\"head\",DInteger 1),(\"tail\",DMap [(\"head\",DInteger 4),(\"tail\",DMap [(\"head\",DInteger 2),(\"tail\",DMap [(\"head\",DInteger 1),(\"tail\",DMap [(\"head\",DInteger 2),(\"tail\",DMap [(\"head\",DInteger 4),(\"tail\",DMap [(\"head\",DInteger 0),(\"tail\",DNull)])])])])])])])])])]),(\"occupied_rows\",DMap [(\"head\",DInteger 1),(\"tail\",DMap [(\"head\",DInteger 1),(\"tail\",DMap [(\"head\",DInteger 3),(\"tail\",DMap [(\"head\",DInteger 2),(\"tail\",DMap [(\"head\",DInteger 3),(\"tail\",DMap [(\"head\",DInteger 1),(\"tail\",DMap [(\"head\",DInteger 4),(\"tail\",DMap [(\"head\",DInteger 1),(\"tail\",DMap [(\"head\",DInteger 0),(\"tail\",DMap [(\"head\",DInteger 4),(\"tail\",DNull)])])])])])])])])])]),(\"game_setup_id\",DString \"90bdd6f1-5302-4ba0-87d7-0f84b9657bc7\")]",
+	"Initial state"
+]
