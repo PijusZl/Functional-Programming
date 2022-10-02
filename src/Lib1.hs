@@ -24,12 +24,12 @@ gameStart (State c r s) d = gameStart'(State c r s) (show d) --document pakeicia
 gameStart' :: State -> String -> State 
 gameStart' (State c r s) [] = State{cols = c, rows = r, ships = s}
 gameStart' (State c r s) (x:xs) = 
-    if x == 'M' -- skaito kol randa M (for DMap)
+    if x == 'c' -- skaito kol randa occupied
         then writeCols (State c r s) 0 xs
             else gameStart' (State c r s) xs
 
 writeCols :: State -> Int -> String -> State 
-writeCols (State c r s) n [] = State{cols = c, rows = r, ships = s}
+writeCols (State c r s) _ [] = State{cols = c, rows = r, ships = s}
 writeCols (State c r s) n (x:xs) = 
     if n == 10 --kadangi lentele 10x10 skaito kol perskaito 10 cols
         then writeRows (State c r s) 0 xs
@@ -42,7 +42,7 @@ addCols :: State -> Int -> State
 addCols (State c r s) x = State {cols = x : c, rows = r, ships = s }
 
 writeRows :: State -> Int -> String -> State
-writeRows (State c r s) n [] = State{cols = c, rows = r, ships = s}
+writeRows (State c r s) _ [] = State{cols = c, rows = r, ships = s}
 writeRows (State c r s) n (x:xs) = 
     if n == 10
         then State {cols = c, rows = r, ships = s} -- grizti po sito, nes baigesi rows
@@ -62,8 +62,8 @@ showCols :: [Int] -> String
 showCols [] = "\n"
 showCols (x:xs) = show x ++ " " ++ showCols xs
 
-showRows :: [((Int, Int), Bool)] -> [Int] -> Int -> String -- a ir b kaip x ir y
-showRows _ [] _ = " "                                      -- 0  1  2  3  4  5  6  7  8  9
+showRows :: [((Int, Int), Bool)] -> [Int] -> Int -> String 
+showRows _ [] _ = " "                                      
 showRows s (x:xs) a = show a ++ " " ++ show x ++ " " ++ printShips s 0 a ++ showRows s xs (a + 1)
 
 printShips :: [((Int, Int), Bool)] -> Int -> Int -> [Char]
@@ -74,15 +74,15 @@ printShips s c r =
 
 checkShip :: [((Int, Int), Bool)] -> Int -> Int -> Char
 checkShip [] _ _ = '_'
-checkShip (((c, r), b):xs) col row =
-    if col <= 9
+checkShip (((c, r), b):xs) l w =
+    if l <= 9
         then
-            if (c == col) && (r == row)
+            if (c == l) && (r == w)
                 then
                     if (b == True)
                         then 'X'
                         else '_'
-                else checkShip xs col row
+                else checkShip xs l w
         else '_'
 
 -- Make check from current state
@@ -99,7 +99,7 @@ extractShips (((_, _), _):xs) = extractShips xs
 -- Receive raw user input tokensu
 toggle :: State -> [String] -> State
 toggle (State c r s) [] = State {cols = c, rows = r, ships = s}
-toggle (State c r s) coords = State {cols = c, rows = r, ships = toggleShips s coords}  
+toggle (State c r s) coor = State {cols = c, rows = r, ships = toggleShips s coor}  
 
 toggleShips :: [((Int, Int), Bool)] -> [String] -> [((Int, Int), Bool)] 
 toggleShips [] _ = []
