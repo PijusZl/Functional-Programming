@@ -146,7 +146,7 @@ toggleOneHint (s, b) (x : xs)
     | (s /= x) = toggleOneHint (s, b) xs
 
 dListToIntArray :: [Document] -> [(Int, Int)]
-dListToIntArray x = map((convertToInt $ pullMapValues "col" x, convertToInt $ pullMapValues "row" x))
+dListToIntArray = map(\x -> (convertToInt $ pullMapValues "col" x, convertToInt $ pullMapValues "row" x))
 
 convertToInt :: Document -> Int
 convertToInt (DInteger i) = i
