@@ -129,7 +129,7 @@ toCoords (x : xs) =
 -- Not converting to string and reading straight from Document is more practical for programming hints
 
 hint :: State -> Document -> State
-hint (State c r s) (DMap ((_ , (DList documents)) : _)) = State {cols = c, rows = r, ships = toggleHints s (dListToIntArray documents) } -- turi grazint ship'us
+hint (State c r s) (DMap ((_ , DList documents) : _)) = State {cols = c, rows = r, ships = toggleHints s (dListToIntArray documents) } -- turi grazint ship'us
 hint s _ = s
 
 -- Algorithm finds the ship that is in location given by the document (example: [(\"col\",DInteger 5),(\"row\",DInteger 6)])
