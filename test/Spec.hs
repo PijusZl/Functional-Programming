@@ -36,8 +36,20 @@ gameStartTests = testGroup "Test start document" []
 
 hintTests :: TestTree
 hintTests = testGroup "Test hint document"
-  [   testCase "empty" $
-        compareEither (hint st dc) (Right st) @?= True
+  [   testCase "empty ships" $
+        compareEither (hint emptyState oneHintDocument) (Right emptyState) @?= True,
+
+      testCase "one ship" $
+        compareEither (hint oneShipStateF oneHintDocument) (Right oneShipStateT) @?= True,
+      
+      testCase "empty document" $
+        compareEither (hint oneShipStateF emptyHintDocument) (Right oneShipStateT) @?= False,
+      
+      testCase "wrong ship" $
+        compareEither (hint oneShipStateF differentHintDocument) (Right oneShipStateT) @?= False,
+
+      testCase "multiple hints" $
+        compareEither (hint multipleShipsF multipleHints) (Right multipleShipsT) @?= True
   ]
 
 -- functions for comparing Either
@@ -54,9 +66,25 @@ compareString :: String -> String -> Bool
 compareString s1 s2 = s1 == s2
 
 -- State and Document cases
+emptyState:: State
+emptyState = State {cols = [], rows = [], ships = []}
 
-st :: State
-st = State {cols = [], rows = [], ships = []}
+--Ship cases
+oneShipStateF :: State
+oneShipStateF = State {cols = [], rows = [], ships = [((5,6),False)]}
+oneShipStateT :: State
+oneShipStateT = State {cols = [], rows = [], ships = [((5,6),True)]}
+multipleShipsF :: State
+multipleShipsF = State {cols = [], rows = [], ships = [((5,6),False), ((4,6),False)]}
+multipleShipsT :: State
+multipleShipsT = State {cols = [], rows = [], ships = [((5,6),True), ((4,6),True)]}
 
-dc :: Document
-dc = DMap [("coords",DList [DMap [("col",DInteger 5),("row",DInteger 6)]])]
+-- Hint documents
+emptyHintDocument:: Document
+emptyHintDocument = DMap [("coords",DList [])]
+oneHintDocument :: Document
+oneHintDocument = DMap [("coords",DList [DMap [("col",DInteger 5),("row",DInteger 6)]])]
+differentHintDocument :: Document
+differentHintDocument = DMap [("coords",DList [DMap [("col",DInteger 4),("row",DInteger 6)]])]
+multipleHints :: Document
+multipleHints = DMap [("coords",DList [DMap [("col",DInteger 5),("row",DInteger 6)],DMap [("col",DInteger 4),("row",DInteger 6)]])]
