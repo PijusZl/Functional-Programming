@@ -29,6 +29,7 @@ renderDocument _ = error "Implement me"
 -- Errors are reported via Either but not error 
 gameStart :: State -> Document -> Either String State
 gameStart (State c r s) d = Right $ gameStart'(State c r s) (show d)
+-- Left viskas kas ne DMap ir t.t.
 
 -- IMPLEMENT
 -- Adds hint data to the game state
