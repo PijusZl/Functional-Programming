@@ -69,5 +69,5 @@ gameStart (State c r s) d = Right $ gameStart'(State c r s) (show d)
 -- Adds hint data to the game state
 -- Errors are reported via Either but not error 
 hint :: State -> Document -> Either String State
-hint (State c r s) (DMap ((_ , (DList documents)) : _)) = Right $ State {cols = c, rows = r, ships = toggleHints s (dListToIntArray documents) } -- turi grazint ship'us
+hint (State c r s) (DMap ((_ , DList documents) : _)) = Right $ State {cols = c, rows = r, ships = toggleHints s (dListToIntArray documents) } -- turi grazint ship'us
 hint s _ = Right s
