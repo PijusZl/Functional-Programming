@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 module Lib1(
-    State(..), emptyState, gameStart, render, mkCheck, toggle, hint, gameStart', toggleHints, dListToIntArray
+    State(..), emptyState, generateShips, gameStart, render, mkCheck, toggle, hint, gameStart', toggleHints, dListToIntArray
 ) where
 
 import Types
