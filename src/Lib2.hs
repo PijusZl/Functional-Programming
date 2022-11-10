@@ -41,11 +41,6 @@ renderDList' (DList x : xs) i = "- " ++ renderDList' x (i ++ "  ") ++ renderDLis
 renderDList' (DMap x : xs) i = "- " ++ renderDMap' x (i ++ "  ") ++ renderDList xs i
 renderDList' [] _ = ""
 
--- renderDList' (DNull : xs) i = "- null\n" ++ renderDList xs i
--- renderDList' (DString x : xs) i = "- " ++ x ++ "\n" ++ renderDList xs i
--- renderDList' (DInteger x : xs) i = "- " ++ show x ++ "\n" ++ renderDList xs i
--- renderDList' (DList x : xs) i = "- " ++ renderDList' x (i ++ "  ") ++ renderDList xs i
-
 renderDMap :: [(String, Document)] -> String -> String
 renderDMap ((s, DNull) : xs) i = i ++ s ++ ": " ++ "null\n" ++ renderDMap xs i
 renderDMap ((s, DString x) : xs) i = i ++ s ++ ": " ++ x ++ "\n" ++ renderDMap xs i 
