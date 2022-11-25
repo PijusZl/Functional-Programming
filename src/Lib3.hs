@@ -33,7 +33,7 @@ parseStartDocument str index = do
 
 parseDocument' :: String -> Int -> Either String ((Document, String), Int)
 parseDocument' [] index = Right ((DNull, ""), index)
-parseDocument' str index = orParser (checkEOF $ parseDocumentType str index) (checkEOF $ parseDocumentList str index)
+parseDocument' str index = checkEOF $ orParser (parseDocumentType str index) (parseDocumentList str index)
 -- parseDocument' str ind = orParser (orParser (checkEOF $ parseDocumentType str ind) (checkEOF $ parseDocumentMap str ind)) (checkEOF $ parseDocumentList str ind)
 
 parseDocument'' :: String -> Int -> Either String ((Document, String), Int)
