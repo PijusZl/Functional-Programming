@@ -41,41 +41,46 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "start" $
         parseDocument "---\n" @?= Right DNull,
       testCase "bad start" $
-        parseDocument "---" @?= Left "\n expected",
+        parseDocument "---" @?= Left "\n expected at char: 3",
       testCase "null" $
         parseDocument (testCases !! 0) @?= Right DNull,
       testCase "integer" $
         parseDocument (testCases !! 1) @?= Right (DInteger 123),
       testCase "string" $
         parseDocument (testCases !! 2) @?= Right (DString "abc"),
-      testCase "bad EOF" $
-        parseDocument (testCases !! 3) @?= Left "expected end of the document"
-    -- IMPLEMENT more test cases:
-    -- * other primitive types/values
-    -- * nested types
+      testCase "no EOF" $
+        parseDocument (testCases !! 3) @?= Left "expected end of the document at char: ",
+      testCase "invalid indentation" $
+        parseDocument (testCases !! 4) @?= Left "invalid identation at char: "
   ]
 
 testCases :: [String]
 testCases = [
     unlines
     [
-      "---\n",
+      "---",
       "null"
     ],
     unlines
     [
-      "---\n",
+      "---",
       "123"
     ],
     unlines
     [
-        "---\n",
-        "abc"
+        "---",
+        "abc    "
     ],
     unlines 
     [
-        "---\n",
-        "abc "
+        "---",
+        "abc     \n"
+    ],
+    unlines 
+    [
+        "---",
+        "abc",
+        " 123"
     ]
   ]
 

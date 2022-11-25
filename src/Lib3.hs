@@ -14,91 +14,110 @@ parseDocument :: String -> Either String Document
 parseDocument [] = Left "empty document"
 parseDocument str = fromParser $ parse str
     where parse s = do
-            (_, r1) <- parseStartDocument s
-            (d, r2) <- parseDocument' r1
+            ((_, r1), i1) <- parseStartDocument s 0
+            ((d, r2), _) <- parseDocument' r1 i1
             return (d, r2)
 
 fromParser :: Either String (Document, String) -> Either String Document
-fromParser (Left s) = Left s
-fromParser (Right (d,_)) = Right d
+fromParser (Left str) = Left str
+fromParser (Right (doc,_)) = Right doc
 
-parseStartDocument :: String -> Either String (Document, String)
-parseStartDocument str = do
-    (_, r1) <- parseChar '-' str
-    (_, r2) <- parseChar '-' r1
-    (_, r3) <- parseChar '-' r2
-    -- optional space
-    (_, r5) <- parseChar '\n' r3
-    return (DNull, r5)
+parseStartDocument :: String -> Int -> Either String ((Document, String), Int)
+parseStartDocument str index = do
+    ((_, r1), i1) <- parseChar '-' str index
+    ((_, r2), i2) <- parseChar '-' r1 i1
+    ((_, r3), i3) <- parseChar '-' r2 i2
+    ((_, r4), i4) <- parseSpace r3 i3
+    ((_, r5), i5) <- parseChar '\n' r4 i4
+    return ((DNull, r5), i5)
 
-parseDocument' :: String -> Either String (Document, String)
-parseDocument' [] = Right (DNull, "")
-parseDocument' str = checkEOF $ parseDocumentType str
--- parseDocument' str = orParser (orParser (checkEOF $ parseDocumentType str) (checkEOF $ parseDocumentMap str)) (checkEOF $ parseDocumentList str)
+parseDocument' :: String -> Int -> Either String ((Document, String), Int)
+parseDocument' [] index = Right ((DNull, ""), index)
+parseDocument' str index = (checkEOF $ parseDocumentType str index) --(parseStartNewline str index)
+-- parseDocument' str ind = orParser (orParser (checkEOF $ parseDocumentType str ind) (checkEOF $ parseDocumentMap str ind)) (checkEOF $ parseDocumentList str ind)
 
-checkEOF :: Either String (Document, String) -> Either String (Document, String)
-checkEOF (Right (d, s))
-            | s == ""   = Right (d, s)
-            | otherwise = Left "expected end of the document"
+checkEOF :: Either String ((Document, String), Int) -> Either String ((Document, String), Int)
+checkEOF (Right ((doc, str), index)) = do
+    ((_, r1), i1) <- parseSpace str index
+    ((_, r2), i2) <- checkEOF' doc r1 i1
+    return ((doc, r2), i2)
 checkEOF l = l
 
-parseDocumentType :: String -> Either String (Document, String)
-parseDocumentType str = orParser (orParser (parseDocumentInt str) (parseDocumentNull str)) (parseDocumentString str)
+checkEOF' :: Document -> String -> Int -> Either String ((Document, String), Int)
+checkEOF' doc str index =
+    if str == "" || str == "\n"
+        then Right ((doc, str), index)
+        else Left $ "expected end of the document at char: " ++ show index ++ " " ++ str
 
-parseDocumentInt :: String -> Either String (Document, String)
-parseDocumentInt str = do
-    (i, r) <- parseInteger str
-    return (DInteger i, r)
+parseStartNewline :: String -> Int -> Either String ((Document, String), Int)
+parseStartNewline str index =
+    if str == "" || str == "\n"
+        then Left $ "expected type, list or end of the document at char: " ++ show index ++ " " ++ str
+        else Left $ "invalid identation at char: " ++ show index ++ " " ++ str
 
-parseInteger :: String -> Either String (Int, String)
-parseInteger str =
+parseDocumentType :: String -> Int -> Either String ((Document, String), Int)
+parseDocumentType str index = orParser (orParser (parseDocumentInt str index) (parseDocumentNull str index)) (parseDocumentString str index)
+
+parseDocumentInt :: String -> Int -> Either String ((Document, String), Int)
+parseDocumentInt str index = do
+    ((d, r), i) <- parseInteger str index
+    return ((DInteger d, r), i)
+
+parseInteger :: String -> Int -> Either String ((Int, String), Int)
+parseInteger str index =
     let
         prefix = takeWhile isNotSeparator str
     in
         case prefix of
-            [] -> Left $ "integer expected" -- at line " ++ "" ++ ", character " ++ ""
+            [] -> Left $ "integer expected at char: " ++ show index
             _ -> if isNothing (readMaybe prefix :: Maybe Int)
-                    then Left $ "integer expected"
-                    else Right (read prefix, drop (length prefix) str)
+                    then Left $ "integer expected at char: " ++ show index
+                    else Right ((read prefix, drop (length prefix) str), index + length prefix)
 
-parseDocumentNull :: String -> Either String (Document, String)
-parseDocumentNull str = do
-    (_, r) <- parseNull str
-    return (DNull, r)
+parseDocumentNull :: String -> Int -> Either String ((Document, String), Int)
+parseDocumentNull str index = do
+    ((_, r), i) <- parseNull str index
+    return ((DNull, r), i)
 
-parseNull :: String -> Either String (String, String)
-parseNull str = do
-    (_, r1) <- parseChar 'n' str
-    (_, r2) <- parseChar 'u' r1
-    (_, r3) <- parseChar 'l' r2
-    (_, r4) <- parseChar 'l' r3
-    return ("", r4)
+parseNull :: String -> Int -> Either String ((String, String), Int)
+parseNull str index = do
+    ((_, r1), i1) <- parseChar 'n' str index
+    ((_, r2), i2) <- parseChar 'u' r1 i1
+    ((_, r3), i3) <- parseChar 'l' r2 i2
+    ((_, r4), i4) <- parseChar 'l' r3 i3
+    return (("", r4), i4)
 
-parseDocumentString :: String -> Either String (Document, String)
-parseDocumentString str = do
-    (s, r) <- parseString str
-    return (DString s, r)
+parseDocumentString :: String -> Int -> Either String ((Document, String), Int)
+parseDocumentString str index = do
+    ((d, r), i) <- parseString str index
+    return ((DString d, r), i)
 
-parseString :: String -> Either String (String, String)
-parseString str =
+parseString :: String -> Int -> Either String ((String, String), Int)
+parseString str index =
     let
         prefix = takeWhile isNotSeparator str
     in
         case prefix of
-            [] -> Left $ "string expected"
-            _  -> Right (prefix, drop (length prefix) str)
+            --[] -> Left $ "string expected at char: " ++ show index ++ str ++ " hehe " ++ drop (length prefix) str
+            _  -> Left (show ((prefix, drop (length prefix) str), index + length prefix))
 
 isNotSeparator :: Char -> Bool
-isNotSeparator c = c /= ' ' && c /= '\n'
+isNotSeparator ch = ch /= ' ' && ch /= '\n'
 
---parseSpace :: String -> Either String (String, String)
+parseSpace :: String -> Int -> Either String ((String, String), Int)
+parseSpace str index =
+    let
+        prefix = takeWhile (== ' ') str
+    in
+        Right ((prefix, drop (length prefix) str), index + length prefix)
 
-parseChar :: Char -> String -> Either String (Char, String)
-parseChar ch [] = Left $ ch : " expected"
-parseChar ch (x:xs) | ch == x   = Right (x, xs)
-                    | otherwise = Left $ ch : " expected"
 
-orParser :: Either String (a, String) -> Either String (a, String) -> Either String (a, String)
+parseChar :: Char -> String -> Int -> Either String ((Char, String), Int)
+parseChar ch [] index = Left $ ch : " expected at char: " ++ show index
+parseChar ch (x:xs) index | ch == x   = Right ((x, xs), index + 1)
+                        | otherwise = Left $ ch : " expected at char: " ++ show index
+
+orParser :: Either String ((a, String), Int) -> Either String ((a, String), Int) -> Either String ((a, String), Int)
 orParser parser1 parser2 =
     case parser1 of
         Right a -> Right a

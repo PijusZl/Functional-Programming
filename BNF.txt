@@ -6,3 +6,8 @@ list ::= "- " list | "- " type (newline list)? | "- " map (newline list)?
 map ::= string ": " type | string ": " newline list
 type ::= integer | string | null
 null ::= "null"
+
+ - - - 5
+ - 1
+
+[[[5]], 1]
