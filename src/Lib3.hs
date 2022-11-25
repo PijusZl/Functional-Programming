@@ -33,8 +33,12 @@ parseStartDocument str index = do
 
 parseDocument' :: String -> Int -> Either String ((Document, String), Int)
 parseDocument' [] index = Right ((DNull, ""), index)
-parseDocument' str index = orParser (parseStartNewline str index) (checkEOF $ parseDocumentType str index)
+parseDocument' str index = orParser (checkEOF $ parseDocumentType str index) (checkEOF $ parseDocumentList str index)
 -- parseDocument' str ind = orParser (orParser (checkEOF $ parseDocumentType str ind) (checkEOF $ parseDocumentMap str ind)) (checkEOF $ parseDocumentList str ind)
+
+parseDocument'' :: String -> Int -> Either String ((Document, String), Int)
+parseDocument'' [] index = Right ((DNull, ""), index)
+parseDocument'' str index = orParser (parseDocumentType str index) (parseDocumentList str index)
 
 checkEOF :: Either String ((Document, String), Int) -> Either String ((Document, String), Int)
 checkEOF (Right ((doc, str), index)) = do
@@ -49,11 +53,11 @@ checkEOF' doc str index =
         then Right ((doc, str), index)
         else Left $ "expected end of the document at char: " ++ show index
 
-parseStartNewline :: String -> Int -> Either String ((Document, String), Int)
-parseStartNewline str index =
-    if str == "" || str == "\n"
-        then Left $ "expected type, list or end of the document at char: " ++ show index
-        else Left $ "invalid identation at char: " ++ show index
+-- parseStartNewline :: String -> Int -> Either String ((Document, String), Int)
+-- parseStartNewline str index =
+--     if str == "" || str == "\n"
+--         then Left $ "expected type, list or end of the document at char: " ++ show index
+--         else Left $ "invalid identation at char: " ++ show index
 
 parseDocumentType :: String -> Int -> Either String ((Document, String), Int)
 parseDocumentType str index = orParser (orParser (parseDocumentInt str index) (parseDocumentNull str index)) (parseDocumentString str index)
@@ -101,6 +105,11 @@ parseString str index =
             [] -> Left $ "string expected at char: " ++ show index
             _  -> Right ((prefix, drop (length prefix) str), index + length prefix)
 
+parseChar :: Char -> String -> Int -> Either String ((Char, String), Int)
+parseChar ch [] index = Left $ ch : " expected at char: " ++ show index
+parseChar ch (x:xs) index | ch == x   = Right ((x, xs), index + 1)
+                        | otherwise = Left $ ch : " expected at char: " ++ show index
+
 isNotSeparator :: Char -> Bool
 isNotSeparator ch = ch /= ' ' && ch /= '\n'
 
@@ -111,11 +120,55 @@ parseSpace str index =
     in
         Right ((prefix, drop (length prefix) str), index + length prefix)
 
+parseDocumentList :: String -> Int -> Either String ((Document, String), Int)
+parseDocumentList str index = do
+    ((_, r1), i1) <- parseChar '-' str index
+    ((_, r2), i2) <- parseChar ' ' r1 i1
+    ((d, r3), i3) <- optional r2 i2 elems
+    case d of
+        Just d' -> return ((DList d', r3), i3)
+        Nothing -> return ((DList [], r3), i3)
 
-parseChar :: Char -> String -> Int -> Either String ((Char, String), Int)
-parseChar ch [] index = Left $ ch : " expected at char: " ++ show index
-parseChar ch (x:xs) index | ch == x   = Right ((x, xs), index + 1)
-                        | otherwise = Left $ ch : " expected at char: " ++ show index
+optional :: String -> Int -> (String -> Int -> Either String ((a, String), Int)) -> Either String ((Maybe a, String), Int)
+optional str index parser =
+    case parser str index of
+        Left _ -> Right ((Nothing, str), index)
+        Right ((t, r), i) -> Right ((Just t, r), i)
+
+
+elems :: String -> Int -> Either String (([Document], String), Int)
+elems str index = do
+    ((l, r), i) <- orParser (lenGt2List str index) (len1List str index)
+    return ((l, r), i)
+
+len1List :: String -> Int -> Either String (([Document], String), Int)
+len1List str index = do
+    ((l, r), i) <- parseDocument'' str index
+    return (([l], r), i)
+
+lenGt2List :: String -> Int -> Either String (([Document], String), Int)
+lenGt2List str index = do
+    ((l1, r1), i1) <- parseDocument'' str index
+    ((l2, r2), i2) <- many1 r1 i1 fromSecond
+    return ((l1:l2, r2), i2)
+
+fromSecond :: String -> Int -> Either String ((Document, String), Int)
+fromSecond str index = do
+    ((_, r1), i1) <- parseChar ',' str index
+    ((l1, r2), i2) <- parseDocument'' r1 i1
+    return ((l1, r2), i2)
+
+many1 :: String -> Int -> (String -> Int -> Either String ((a, String), Int)) -> Either String (([a], String), Int)
+many1 str index parser = many1' str index []
+    where
+        many1' s i [] =
+             case parser s i of
+                Left e -> Left e
+                Right ((t1, r1), i1) -> many1' r1 i1 [t1]
+        many1' s i acc =
+            case parser s i of
+                Left _ -> Right ((reverse acc, s), i)
+                Right ((t1, r1), i1) -> many1' r1 i1 (t1:acc)
 
 orParser :: Either String ((a, String), Int) -> Either String ((a, String), Int) -> Either String ((a, String), Int)
 orParser parser1 parser2 =
