@@ -49,9 +49,9 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "string" $
         parseDocument (testCases !! 2) @?= Right (DString "abc"),
       testCase "no EOF" $
-        parseDocument (testCases !! 3) @?= Left "expected end of the document at char: ",
+        parseDocument (testCases !! 3) @?= Left "expected end of the document at char: 12",
       testCase "invalid indentation" $
-        parseDocument (testCases !! 4) @?= Left "invalid identation at char: "
+        parseDocument (testCases !! 4) @?= Left "invalid identation at char: 4"
   ]
 
 testCases :: [String]
@@ -79,8 +79,7 @@ testCases = [
     unlines 
     [
         "---",
-        "abc",
-        " 123"
+        " abc"
     ]
   ]
 

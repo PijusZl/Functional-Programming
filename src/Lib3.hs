@@ -33,7 +33,7 @@ parseStartDocument str index = do
 
 parseDocument' :: String -> Int -> Either String ((Document, String), Int)
 parseDocument' [] index = Right ((DNull, ""), index)
-parseDocument' str index = (checkEOF $ parseDocumentType str index) --(parseStartNewline str index)
+parseDocument' str index = orParser (parseStartNewline str index) (checkEOF $ parseDocumentType str index)
 -- parseDocument' str ind = orParser (orParser (checkEOF $ parseDocumentType str ind) (checkEOF $ parseDocumentMap str ind)) (checkEOF $ parseDocumentList str ind)
 
 checkEOF :: Either String ((Document, String), Int) -> Either String ((Document, String), Int)
@@ -47,13 +47,13 @@ checkEOF' :: Document -> String -> Int -> Either String ((Document, String), Int
 checkEOF' doc str index =
     if str == "" || str == "\n"
         then Right ((doc, str), index)
-        else Left $ "expected end of the document at char: " ++ show index ++ " " ++ str
+        else Left $ "expected end of the document at char: " ++ show index
 
 parseStartNewline :: String -> Int -> Either String ((Document, String), Int)
 parseStartNewline str index =
     if str == "" || str == "\n"
-        then Left $ "expected type, list or end of the document at char: " ++ show index ++ " " ++ str
-        else Left $ "invalid identation at char: " ++ show index ++ " " ++ str
+        then Left $ "expected type, list or end of the document at char: " ++ show index
+        else Left $ "invalid identation at char: " ++ show index
 
 parseDocumentType :: String -> Int -> Either String ((Document, String), Int)
 parseDocumentType str index = orParser (orParser (parseDocumentInt str index) (parseDocumentNull str index)) (parseDocumentString str index)
@@ -98,8 +98,8 @@ parseString str index =
         prefix = takeWhile isNotSeparator str
     in
         case prefix of
-            --[] -> Left $ "string expected at char: " ++ show index ++ str ++ " hehe " ++ drop (length prefix) str
-            _  -> Left (show ((prefix, drop (length prefix) str), index + length prefix))
+            [] -> Left $ "string expected at char: " ++ show index
+            _  -> Right ((prefix, drop (length prefix) str), index + length prefix)
 
 isNotSeparator :: Char -> Bool
 isNotSeparator ch = ch /= ' ' && ch /= '\n'
