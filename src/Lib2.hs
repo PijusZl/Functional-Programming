@@ -18,9 +18,9 @@ addCoord = DInteger
 
 --Document to yaml
 renderDocument :: Document -> String
-renderDocument (DInteger x) = "---\n" ++ "- " ++ show x ++ "\n"
-renderDocument DNull = "---\n" ++ "- null\n"
-renderDocument (DString x) = "---\n" ++ "- " ++ x ++ "\n"
+renderDocument (DInteger x) = "---\n" ++ show x
+renderDocument DNull = "---\n" ++ "null"
+renderDocument (DString x) = "---\n" ++ x 
 renderDocument (DList l) = "---\n" ++ renderDList l ""
 renderDocument (DMap m) = "---\n" ++ renderDMap m ""
 
