@@ -8,6 +8,7 @@ import Lib1 (State(..), generateShips)
 import Lib2 (renderDocument, gameStart, hint)
 import Lib3 (parseDocument)
 import Types (Document(..))
+import Data.ByteString.Char8 (unlines)
 
 main :: IO ()
 main = defaultMain (testGroup "Tests" [
@@ -51,7 +52,20 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "no EOF" $
         parseDocument (testCases !! 3) @?= Left "expected end of the document at char: 12",
       testCase "invalid indentation" $
-        parseDocument (testCases !! 4) @?= Left "invalid identation at char: 4"
+        parseDocument (testCases !! 4) @?= Left "invalid identation at char: 4",
+      testCase "list with null" $
+        parseDocument (testCases !! 5) @?= Right DList[DNull],
+      testCase "list with integers" $
+        parseDocument (testCases !! 6) @?= Right DList[DInteger 1,DInteger 2,DInteger 3],
+      testCase "list with string" $
+        parseDocument (testCases !! 7) @?= Right DList[DString "a"],
+      testCase "list with 2 levels" $
+        parseDocument (testCases !! 8) @?= Right DList[DInteger 1,DList[2]],
+      testCase "list with different types" $
+        parseDocument (testCases !! 9) @?= Right DList[DInteger 1, DString "a", DNull],
+      testCase "triple nested list with a" $
+        parseDocument (testCases !! 10) @?= Right DList[DList[Dlist[DString "a"]]]
+
   ]
 
 testCases :: [String]
@@ -80,7 +94,43 @@ testCases = [
     [
         "---",
         " abc"
+    ],
+    unlines
+    [
+      "---",
+      "- null"
     ]
+    unlines
+    [
+      "---",
+      "- 1",
+      "- 2",
+      "- 3"
+    ]
+    unlines
+    [
+      "---",
+      "- a"
+    ]
+    unlines
+    [
+      "---",
+      "- 1",
+      "  - 2"
+    ]
+    unlines
+    [
+      "---",
+      "- a",
+      "- 1",
+      "- null"
+    ]
+    unlines
+    [
+      "---",
+      "- - - a"
+    ]
+
   ]
 
 toYamlTests :: TestTree
