@@ -1,14 +1,8 @@
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as Q
-import Test.QuickCheck.Arbitrary
-import Test.QuickCheck.Gen as Gen
-import Test.QuickCheck.Modifiers (NonEmptyList(..))
 import Data.String.Conversions
 import Data.Yaml as Y ( encode )
-import Data.List as L
-
-import Data.IORef
 
 import Lib1 (State(..), generateShips)
 import Lib2 (renderDocument, gameStart, hint)
@@ -66,13 +60,13 @@ dInt :: TestTree
 dInt = testGroup "yaml DInt"
   [  
     Q.testProperty "parseDocument (renderDocument doc) == doc" $
-      \doc -> (parseDocument (renderDocument (doc::Document))) /= Right doc
+      \doc -> (parseDocument (renderDocument (doc::Document))) == Right doc
   ]
 
 fromYamlTests :: TestTree
 fromYamlTests = testGroup "Document from yaml"
   [   testCase "empty" $
-        parseDocument "" @?= Right DNull,
+        parseDocument "" @?= Right (DString ""),
       testCase "empty after start" $
         parseDocument "---\n" @?= Right DNull,
       testCase "incorrect start" $
@@ -213,7 +207,7 @@ toYamlTests =
           @?= "---\ntest",
       testCase "empty list" $
         renderDocument (DList []) 
-          @?= "---\n",
+          @?= "---\n- ",
       testCase "list of ints" $
         renderDocument (DList [DInteger 5, DInteger 6]) 
           @?= unlines

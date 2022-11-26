@@ -13,7 +13,7 @@ import Text.Read
 -- IMPLEMENT
 -- Parses a document from yaml
 parseDocument :: String -> Either String Document
-parseDocument [] = Right DNull
+parseDocument [] = Right (DString"") --for test DString ""
 parseDocument str = fromParser $ parse str
     where parse s = do
             ((_, r1), i1) <- optional s 0 parseStartDocument
@@ -153,7 +153,7 @@ parseDocumentList str index acc = parseDocListOne str index acc
 parseDocListOne :: String -> Int -> Int -> Either String ((Document, String), Int)
 parseDocListOne str index acc = do
     ((_, r1), i1) <- parseChar '-' str index
-    ((_, r2), i2) <- parseChar ' ' r1 i1
+    ((_, r2), i2) <- parseChar ' ' r1 i1 --After here it might end, representing DList[], so "- " should return DList[]
     (((d, r3), i3), _) <- parseList r2 i2 (acc + 2)
     ((_, r4), i4) <- parseRemainingLine r3 i3
     return ((DList d, r4), i4)
