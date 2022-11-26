@@ -1,8 +1,14 @@
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck as Q
+import Test.QuickCheck.Arbitrary
+import Test.QuickCheck.Gen as Gen
+import Test.QuickCheck.Modifiers (NonEmptyList(..))
 import Data.String.Conversions
 import Data.Yaml as Y ( encode )
+import Data.List as L
+
+import Data.IORef
 
 import Lib1 (State(..), generateShips)
 import Lib2 (renderDocument, gameStart, hint)
@@ -18,7 +24,7 @@ main = defaultMain (testGroup "Tests" [
   properties])
 
 properties :: TestTree
-properties = testGroup "Properties" [golden, dogfood]
+properties = testGroup "Properties" [golden, dogfood, dInt]
 
 golden :: TestTree
 golden = testGroup "Handles foreign rendering"
@@ -32,6 +38,35 @@ dogfood = testGroup "Eating your own dogfood"
   [  
     testProperty "parseDocument (renderDocument doc) == doc" $
       \doc -> parseDocument (renderDocument doc) == Right doc
+  ]
+
+-- instance Arbitrary Document where
+--     arbitrary = gDocument
+
+-- gDocument :: Gen Document
+-- gDocument = oneof [gDInteger, gDList, gDString]
+
+-- gDInteger :: Gen Document
+-- gDInteger = do
+--     i <- arbitrary `suchThat` (>= 0)
+--     return $ DInteger i
+
+-- gDList :: Gen Document
+-- gDList = do
+--     i <- arbitrary `suchThat` (>= 0)
+--     v <- vectorOf (min 2 i) gDocument
+--     return $ DList v
+
+-- gDString :: Gen Document
+-- gDString = do
+--   i <- arbitrary `suchThat` (/= "")
+--   return $ DString i
+
+dInt :: TestTree
+dInt = testGroup "yaml DInt"
+  [  
+    Q.testProperty "parseDocument (renderDocument doc) == doc" $
+      \doc -> (parseDocument (renderDocument (doc::Document))) /= Right doc
   ]
 
 fromYamlTests :: TestTree
@@ -169,25 +204,13 @@ toYamlTests =
     "Document to yaml"
     [ testCase "null" $
         renderDocument DNull 
-          @?= unlines 
-            [
-              "---",
-              "- null"
-            ],
+          @?= "---\nnull",
       testCase "int" $
         renderDocument (DInteger 5) 
-          @?= unlines 
-            [
-              "---",
-              "- 5"
-            ],
+          @?= "---\n5",
       testCase "string" $
         renderDocument (DString "test") 
-          @?= unlines 
-            [
-              "---",
-              "- test"
-            ],
+          @?= "---\ntest",
       testCase "empty list" $
         renderDocument (DList []) 
           @?= "---\n",
