@@ -159,8 +159,8 @@ testCases =
     [
       "---",
       "- a",
-      "- 1",
-      "- null"
+      "  1",
+      "  null"
     ],
     unlines
     [
