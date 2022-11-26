@@ -37,11 +37,13 @@ dogfood = testGroup "Eating your own dogfood"
 fromYamlTests :: TestTree
 fromYamlTests = testGroup "Document from yaml"
   [   testCase "empty" $
-        parseDocument "" @?= Left "empty document",
-      testCase "start" $
+        parseDocument "" @?= Right DNull,
+      testCase "empty after start" $
         parseDocument "---\n" @?= Right DNull,
-      testCase "bad start" $
-        parseDocument "---" @?= Left "\n expected at char: 3",
+      testCase "incorrect start" $
+        parseDocument "---" @?= Right (DString "---"),
+      testCase "integer without start" $
+        parseDocument "123" @?= Right (DInteger 123),
       testCase "null" $
         parseDocument (testCases !! 0) @?= Right DNull,
       testCase "integer" $
@@ -50,21 +52,26 @@ fromYamlTests = testGroup "Document from yaml"
         parseDocument (testCases !! 2) @?= Right (DString "abc"),
       testCase "no EOF" $
         parseDocument (testCases !! 3) @?= Left "expected end of the document at char: 12",
-      testCase "invalid indentation" $
-        parseDocument (testCases !! 4) @?= Left "invalid identation at char: 4",
+      testCase "expected type" $
+        parseDocument (testCases !! 4) @?= Left "expected type, list, map or empty document at char: 4",
       testCase "list with null" $
         parseDocument (testCases !! 5) @?= Right (DList[DNull]),
       testCase "list with integers" $
         parseDocument (testCases !! 6) @?= Right (DList[DInteger 1,DInteger 2,DInteger 3]),
       testCase "list with string" $
-        parseDocument (testCases !! 7) @?= Right (DList[DString "a"]),
+        parseDocument (testCases !! 7) @?= Right (DList[DString "a", DString "a"]),
       testCase "list with 2 levels" $
         parseDocument (testCases !! 8) @?= Right (DList[DInteger 1,DList[DInteger 2]]),
       testCase "list with different types" $
-        parseDocument (testCases !! 9) @?= Right (DList[DInteger 1, DString "a", DNull]),
+        parseDocument (testCases !! 9) @?= Right (DList[DString "a", DInteger 1, DNull]),
       testCase "triple nested list with a" $
-        parseDocument (testCases !! 10) @?= Right (DList[DList[DList[DString "a"]]])
-
+        parseDocument (testCases !! 10) @?= Right (DList[DList[DList[DString "a"]]]),
+      testCase "simple map" $
+        parseDocument (testCases !! 11) @?= Right (DMap[("test", DString "ds")]),
+      testCase "list in map" $
+        parseDocument (testCases !! 12) @?= Right (DMap[("test1", DList [DMap[("tt", DString "abc")], DMap[("gggg", DInteger 123)]])]),
+      testCase "mixed test" $
+        parseDocument (testCases !! 13) @?= Right (DList[DList[DMap[("test", DInteger 123)]], DList[DList[DMap[("test2", DInteger 321)]]], DList[DMap[("abba", DList[DInteger 45, DInteger 178, DString "abc", DList[DMap[("col", DInteger 5)]]])]]])
   ]
 
 testCases :: [String]
@@ -104,13 +111,14 @@ testCases =
     [
       "---",
       "- 1",
-      "- 2",
-      "- 3"
+      "  2",
+      "  3"
     ],
     unlines
     [
       "---",
-      "- a"
+      "- a",
+      "  a"
     ],
     unlines
     [
@@ -129,6 +137,29 @@ testCases =
     [
       "---",
       "- - - a"
+    ],
+    unlines
+    [
+      "---",
+      "test: ds"
+    ],
+    unlines
+    [
+      "---",
+      "test1:  ",
+      "  tt: abc",
+      "  gggg: 123"
+    ],
+    unlines
+    [
+      "---",
+      "- test: 123",
+      "- - test2: 321",
+      "- abba: ",
+      "    45",
+      "    178",
+      "    abc",
+      "      col: 5"
     ]
   ]
 
