@@ -1,14 +1,8 @@
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as Q
-import Test.QuickCheck.Arbitrary
-import Test.QuickCheck.Gen as Gen
-import Test.QuickCheck.Modifiers (NonEmptyList(..))
 import Data.String.Conversions
 import Data.Yaml as Y ( encode )
-import Data.List as L
-
-import Data.IORef
 
 import Lib1 (State(..), generateShips)
 import Lib2 (renderDocument, gameStart, hint)
@@ -66,13 +60,13 @@ dInt :: TestTree
 dInt = testGroup "yaml DInt"
   [  
     Q.testProperty "parseDocument (renderDocument doc) == doc" $
-      \doc -> (parseDocument (renderDocument (doc::Document))) /= Right doc
+      \doc -> (parseDocument (renderDocument (doc::Document))) == Right doc
   ]
 
 fromYamlTests :: TestTree
 fromYamlTests = testGroup "Document from yaml"
   [   testCase "empty" $
-        parseDocument "" @?= Right DNull,
+        parseDocument "" @?= Right (DString ""),
       testCase "empty after start" $
         parseDocument "---\n" @?= Right DNull,
       testCase "incorrect start" $
@@ -86,21 +80,21 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "string" $
         parseDocument (testCases !! 2) @?= Right (DString "abc"),
       testCase "no EOF" $
-        parseDocument (testCases !! 3) @?= Left "expected end of the document at char: 12",
+        parseDocument (testCases !! 3) @?= Left "expected end of the document at char: 13",
       testCase "expected type" $
-        parseDocument (testCases !! 4) @?= Left "expected type, list, map or empty document at char: 4",
+        parseDocument (testCases !! 4) @?= Left "expected type, list, map or empty document at char: 0",
       testCase "list with null" $
         parseDocument (testCases !! 5) @?= Right (DList[DNull]),
       testCase "list with integers" $
         parseDocument (testCases !! 6) @?= Right (DList[DInteger 1,DInteger 2,DInteger 3]),
       testCase "list with string" $
-        parseDocument (testCases !! 7) @?= Right (DList[DString "a", DString "a"]),
-      testCase "list with 2 levels" $
-        parseDocument (testCases !! 8) @?= Right (DList[DInteger 1,DList[DInteger 2]]),
+        parseDocument (testCases !! 7) @?= Right (DList[DList[DString "a"], DList[DString "a"]]),
       testCase "list with different types" $
-        parseDocument (testCases !! 9) @?= Right (DList[DString "a", DInteger 1, DNull]),
+        parseDocument (testCases !! 8) @?= Right (DList[DString "a", DInteger 1, DNull]),
       testCase "triple nested list with a" $
-        parseDocument (testCases !! 10) @?= Right (DList[DList[DList[DString "a"]]]),
+        parseDocument (testCases !! 9) @?= Right (DList[DList[DList[DString "a"]]]),
+      testCase "nested lists"  $
+        parseDocument (testCases !! 10) @?= Right (DList[DList[DInteger 1,DList[DList[DString "a"], DList[DString "b"]], DList[DInteger 2], DNull, DList[DString "c"]], DList[DNull]]),
       testCase "simple map" $
         parseDocument (testCases !! 11) @?= Right (DMap[("test", DString "ds")]),
       testCase "list in map" $
@@ -134,7 +128,6 @@ testCases =
     ],
     unlines 
     [
-      "---",
       " abc"
     ],
     unlines
@@ -151,27 +144,30 @@ testCases =
     ],
     unlines
     [
-      "---",
       "- a",
-      "  a"
-    ],
-    unlines
-    [
-      "---",
-      "- 1",
-      "  - 2"
+      "- a"
     ],
     unlines
     [
       "---",
       "- a",
-      "- 1",
-      "- null"
+      "  1",
+      "  null"
     ],
     unlines
     [
-      "---",
       "- - - a"
+    ],
+    unlines
+    [
+      "---",
+      "- 1",
+      "  - - a",
+      "    - b",
+      "  - 2",
+      "  null ",
+      "  - c   ",
+      "- null  "
     ],
     unlines
     [
@@ -183,7 +179,8 @@ testCases =
       "---",
       "test1:  ",
       "  tt: abc",
-      "  gggg: 123"
+      "  gggg: 123",
+      "test2: 321"
     ],
     unlines
     [
@@ -213,7 +210,7 @@ toYamlTests =
           @?= "---\ntest",
       testCase "empty list" $
         renderDocument (DList []) 
-          @?= "---\n",
+          @?= "---\n- ",
       testCase "list of ints" $
         renderDocument (DList [DInteger 5, DInteger 6]) 
           @?= unlines
