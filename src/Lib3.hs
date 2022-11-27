@@ -13,7 +13,7 @@ import Text.Read
 -- IMPLEMENT
 -- Parses a document from yaml
 parseDocument :: String -> Either String Document
-parseDocument [] = Right (DString"") --for test DString ""
+parseDocument [] = Right (DNull) --for test DString ""
 parseDocument str = fromParser $ parse str
     where parse s = do
             ((_, r1), i1) <- optional s 0 parseStartDocument
@@ -48,7 +48,7 @@ parseEmpty str index =
          else Right ((DNull, str), index) --Left $ "invalid identation at char: " ++ show index
 
 parseDocument' :: String -> Int -> Either String ((Document, String), Int)
-parseDocument' [] index = Right ((DNull, ""), index)
+parseDocument' [] index = Right ((DString "", ""), index)
 parseDocument' str index = do
     ((_, r1), i1) <- parseIndentation str index 0
     ((d, r2), i2) <- checkEOF $ orParser (orParser (parseDocumentList r1 i1 0) (parseDocumentMap r1 i1 0)) (parseDocumentType r1 i1)

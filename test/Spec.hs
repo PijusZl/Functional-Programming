@@ -18,7 +18,7 @@ main = defaultMain (testGroup "Tests" [
   properties])
 
 properties :: TestTree
-properties = testGroup "Properties" [golden, dogfood, dInt]
+properties = testGroup "Properties" [golden, dInt]
 
 golden :: TestTree
 golden = testGroup "Handles foreign rendering"
@@ -27,37 +27,8 @@ golden = testGroup "Handles foreign rendering"
       \doc -> parseDocument (cs (Y.encode doc)) == Right doc
   ]
 
-dogfood :: TestTree
-dogfood = testGroup "Eating your own dogfood"
-  [  
-    testProperty "parseDocument (renderDocument doc) == doc" $
-      \doc -> parseDocument (renderDocument doc) == Right doc
-  ]
-
--- instance Arbitrary Document where
---     arbitrary = gDocument
-
--- gDocument :: Gen Document
--- gDocument = oneof [gDInteger, gDList, gDString]
-
--- gDInteger :: Gen Document
--- gDInteger = do
---     i <- arbitrary `suchThat` (>= 0)
---     return $ DInteger i
-
--- gDList :: Gen Document
--- gDList = do
---     i <- arbitrary `suchThat` (>= 0)
---     v <- vectorOf (min 2 i) gDocument
---     return $ DList v
-
--- gDString :: Gen Document
--- gDString = do
---   i <- arbitrary `suchThat` (/= "")
---   return $ DString i
-
 dInt :: TestTree
-dInt = testGroup "yaml DInt"
+dInt = testGroup "Document -> renderDocument -> parseDocument"
   [  
     Q.testProperty "parseDocument (renderDocument doc) == doc" $
       \doc -> (parseDocument (renderDocument (doc::Document))) == Right doc
@@ -66,9 +37,9 @@ dInt = testGroup "yaml DInt"
 fromYamlTests :: TestTree
 fromYamlTests = testGroup "Document from yaml"
   [   testCase "empty" $
-        parseDocument "" @?= Right (DString ""),
+        parseDocument "" @?= Right DNull,
       testCase "empty after start" $
-        parseDocument "---\n" @?= Right DNull,
+        parseDocument "---\n" @?= Right (DString ""),
       testCase "incorrect start" $
         parseDocument "---" @?= Right (DString "---"),
       testCase "integer without start" $
@@ -100,7 +71,17 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "list in map" $
         parseDocument (testCases !! 12) @?= Right (DMap[("test1", DList [DMap[("tt", DString "abc")], DMap[("gggg", DInteger 123)]])]),
       testCase "mixed test" $
-        parseDocument (testCases !! 13) @?= Right (DList[DList[DMap[("test", DInteger 123)]], DList[DList[DMap[("test2", DInteger 321)]]], DList[DMap[("abba", DList[DInteger 45, DInteger 178, DString "abc", DList[DMap[("col", DInteger 5)]]])]]])
+        parseDocument (testCases !! 13) @?= Right (DList[DList[DMap[("test", DInteger 123)]], DList[DList[DMap[("test2", DInteger 321)]]], DList[DMap[("abba", DList[DInteger 45, DInteger 178, DString "abc", DList[DMap[("col", DInteger 5)]]])]]]),
+      testCase "incorrect DNull" $
+        parseDocument "---\nnulll" @?= Left "expected end of the document at char: 8", --o neturetu gaut DString "nulll"
+      testCase "incorrect EOF" $
+        parseDocument "---\n-5\n\n" @?= Left "expected end of the document at char: 6",
+      testCase "incorrect DString" $
+        parseDocument "---\na::b" @?= Left "expected end of the document at char: 5",
+      testCase "incorrect DList" $
+        parseDocument "---\n-- 5 " @?= Left "expected end of the document at char: 7",
+      testCase "incorrect DMap" $
+        parseDocument "---\nmap:- a" @?= Left "expected end of the document at char: 7"
   ]
 
 testCases :: [String]
