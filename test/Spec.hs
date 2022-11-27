@@ -69,13 +69,13 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "simple map" $
         parseDocument (testCases !! 11) @?= Right (DMap[("test", DString "ds")]),
       testCase "list in map" $
-        parseDocument (testCases !! 12) @?= Right (DMap[("test1", DList [DMap[("tt", DString "abc")], DMap[("gggg", DInteger 123)]])]),
-      testCase "mixed test" $
-        parseDocument (testCases !! 13) @?= Right (DList[DList[DMap[("test", DInteger 123)]], DList[DList[DMap[("test2", DInteger 321)]]], DList[DMap[("abba", DList[DInteger 45, DInteger 178, DString "abc", DList[DMap[("col", DInteger 5)]]])]]]),
+        parseDocument (testCases !! 12) @?= Right (DList [DMap [("test1",DList [DMap [("tt",DString "abc")],DMap [("gggg",DInteger 123)]])],DMap [("test2",DInteger 321)]]),
+      testCase "nested all types" $
+        parseDocument (testCases !! 13) @?= Right (DList [DList [DMap [("test",DInteger 123)]],DList [DList [DMap [("test2",DInteger 321)]]],DList [DMap [("abba",DList [DInteger 45,DInteger 178,DString "abc",DMap [("col",DInteger 5)]])]]]),
       testCase "incorrect DNull" $
-        parseDocument "---\nnulll" @?= Left "expected end of the document at char: 8", --o neturetu gaut DString "nulll"
+        parseDocument "---\nnulll" @?= Right (DString "nulll"),
       testCase "incorrect EOF" $
-        parseDocument "---\n-5\n\n" @?= Left "expected end of the document at char: 6",
+        parseDocument "---\n-5\n\n" @?= Left "expected end of the document at char: 7",
       testCase "incorrect DString" $
         parseDocument "---\na::b" @?= Left "expected end of the document at char: 5",
       testCase "incorrect DList" $
@@ -172,7 +172,7 @@ testCases =
       "    45",
       "    178",
       "    abc",
-      "      col: 5"
+      "    col: 5"
     ]
   ]
 

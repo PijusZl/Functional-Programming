@@ -13,7 +13,7 @@ import Text.Read
 -- Parses a document from yaml
 
 parseDocument :: String -> Either String Document
-parseDocument [] = Right (DNull) --for test DString ""
+parseDocument [] = Right DNull
 parseDocument str = fromParser $ parse str
     where parse s = do
             ((_, r1), i1) <- optional s 0 parseStartDocument
@@ -79,7 +79,11 @@ parseNull str index = do
     ((_, r2), i2) <- parseChar 'u' r1 i1
     ((_, r3), i3) <- parseChar 'l' r2 i2
     ((_, r4), i4) <- parseChar 'l' r3 i3
-    return (("", r4), i4)
+    case head r4 of
+        ' ' -> return (("", r4), i4)
+        '\0'  -> return (("", r4), i4)
+        '\n'  -> return (("", r4), i4)
+        _ -> Left "expected separator between null"
 
 parseDocumentString :: String -> Int -> Either String ((Document, String), Int)
 parseDocumentString str index = do
@@ -193,23 +197,23 @@ parseMap str index acc = do
     ((_, r2), i2) <- parseChar ':' r1 i1
     ((_, r3), i3) <- parseChar ' ' r2 i2
     ((_, r4), i4) <- optional'' r3 i3 acc skipToIndentation
-    (((m, r5), i5), a) <- orParser' (manyMap r4 i4 acc) (oneMap r4 i4 acc)
-    let mtuple = fmap (makeTuple n) m
-    return (((mtuple, r5), i5), a)
+    (((m, r5), i5), a) <- orParser' (manyMap r4 i4 acc n) (oneMap r4 i4 acc n)
+    --let mtuple = fmap (makeTuple n) m
+    return (((m, r5), i5), a)
 
 makeTuple :: String -> Document -> (String, Document)
 makeTuple str doc = (str, doc)
 
-oneMap :: String -> Int -> Int -> Either String ((([Document], String), Int), Int)
-oneMap str index acc = do
+oneMap :: String -> Int -> Int -> String -> Either String ((([(String, Document)], String), Int), Int)
+oneMap str index acc name = do
     ((l, r), i) <- parseDocumentMap' str index acc
-    return ((([l], r), i), acc)
+    return ((([(name, l)], r), i), acc)
 
-manyMap :: String -> Int -> Int -> Either String ((([Document], String), Int), Int)
-manyMap str index acc = do
+manyMap :: String -> Int -> Int -> String -> Either String ((([(String, Document)], String), Int), Int)
+manyMap str index acc name = do
     ((l1, r1), i1) <- parseDocumentMap' str index acc
     (((l2, r2), i2), a) <- many r1 i1 acc repeatParseMap
-    return (((l1:l2, r2), i2), a)
+    return ((([(name ,DList (l1:l2))], r2), i2), a)
 
 repeatParseMap :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
 repeatParseMap str index acc = do
@@ -313,9 +317,6 @@ orParser' parser1 parser2 =
                 Right a2 -> Right a2
                 Left _ -> parser1
 
--- IMPLEMENT
--- Change right hand side as you wish
--- You will have to create an instance of FromDocument
 data GameStart = GameStart {
     start :: Document
 } deriving Show
@@ -328,16 +329,9 @@ instance FromDocument GameStart where
     fromDocument (DList _) = Left "can not read from list"
     fromDocument d = Right (GameStart d)
 
-
--- This adds game data to initial state
--- Errors are not reported since GameStart is already totally valid adt
--- containing all fields needed
 gameStart :: State -> GameStart -> State
 gameStart (State c r s) (GameStart d) = gameStart'(State c r s) (show d)
 
--- IMPLEMENT
--- Change right hand side as you wish
--- You will have to create an instance of FromDocument
 data Hint = Hint {
     hlist :: [Document]
 } deriving Show
@@ -350,8 +344,5 @@ instance FromDocument Hint where
     fromDocument (DMap (("coords" , DList documents) : _)) = Right (Hint documents)
     fromDocument _ = Left "coords in hint document not found"
 
--- Adds hint data to the game state
--- Errors are not reported since GameStart is already totally valid adt
--- containing all fields needed
 hint :: State -> Hint -> State
 hint (State c r s) (Hint d) = State {cols = c, rows = r, ships = toggleHints s (dListToIntArray d) }
