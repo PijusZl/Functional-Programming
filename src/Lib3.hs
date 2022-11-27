@@ -13,7 +13,7 @@ import Text.Read
 -- Parses a document from yaml
 
 parseDocument :: String -> Either String Document
-parseDocument [] = Right (DString"") --for test DString ""
+parseDocument [] = Right (DNull) --for test DString ""
 parseDocument str = fromParser $ parse str
     where parse s = do
             ((_, r1), i1) <- optional s 0 parseStartDocument
@@ -42,7 +42,7 @@ parseEmpty str index =
          else Right ((DNull, str), index)
 
 parseDocument' :: String -> Int -> Either String ((Document, String), Int)
-parseDocument' [] index = Right ((DNull, ""), index)
+parseDocument' [] index = Right ((DString "", ""), index)
 parseDocument' str index = do
     ((d, r), i) <- checkEOF $ orParser (orParser (parseDocumentLists str index 0) (parseDocumentMaps str index 0)) (parseDocumentType str index)
     return ((d, r), i)
