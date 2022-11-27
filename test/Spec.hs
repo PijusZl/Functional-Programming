@@ -1,6 +1,6 @@
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck as Q
 import Data.String.Conversions
 import Data.Yaml as Y ( encode )
 
@@ -18,7 +18,7 @@ main = defaultMain (testGroup "Tests" [
   properties])
 
 properties :: TestTree
-properties = testGroup "Properties" [golden, dogfood]
+properties = testGroup "Properties" [golden, dInt]
 
 golden :: TestTree
 golden = testGroup "Handles foreign rendering"
@@ -27,55 +27,153 @@ golden = testGroup "Handles foreign rendering"
       \doc -> parseDocument (cs (Y.encode doc)) == Right doc
   ]
 
-dogfood :: TestTree
-dogfood = testGroup "Eating your own dogfood"
+dInt :: TestTree
+dInt = testGroup "Document -> renderDocument -> parseDocument"
   [  
-    testProperty "parseDocument (renderDocument doc) == doc" $
-      \doc -> parseDocument (renderDocument doc) == Right doc
+    Q.testProperty "parseDocument (renderDocument doc) == doc" $
+      \doc -> (parseDocument (renderDocument (doc::Document))) == Right doc
   ]
 
 fromYamlTests :: TestTree
 fromYamlTests = testGroup "Document from yaml"
   [   testCase "empty" $
-        parseDocument "" @?= Left "empty document",
-      testCase "start" $
-        parseDocument "---\n" @?= Right DNull,
-      testCase "bad start" $
-        parseDocument "---" @?= Left "\n expected",
+        parseDocument "" @?= Right DNull,
+      testCase "empty after start" $
+        parseDocument "---\n" @?= Right (DString ""),
+      testCase "incorrect start" $
+        parseDocument "---" @?= Right (DString "---"),
+      testCase "integer without start" $
+        parseDocument "123" @?= Right (DInteger 123),
       testCase "null" $
         parseDocument (testCases !! 0) @?= Right DNull,
       testCase "integer" $
         parseDocument (testCases !! 1) @?= Right (DInteger 123),
       testCase "string" $
         parseDocument (testCases !! 2) @?= Right (DString "abc"),
-      testCase "bad EOF" $
-        parseDocument (testCases !! 3) @?= Left "expected end of the document"
-    -- IMPLEMENT more test cases:
-    -- * other primitive types/values
-    -- * nested types
+      testCase "no EOF" $
+        parseDocument (testCases !! 3) @?= Left "expected end of the document at char 13: ->\n",
+      testCase "expected type" $
+        parseDocument (testCases !! 4) @?= Left "expected type, list, map or empty document at char 0: -> abc\n",
+      testCase "list with null" $
+        parseDocument (testCases !! 5) @?= Right (DList[DNull]),
+      testCase "list with integers" $
+        parseDocument (testCases !! 6) @?= Right (DList[DInteger 1,DInteger 2,DInteger 3]),
+      testCase "list with string" $
+        parseDocument (testCases !! 7) @?= Right (DList[DList[DString "a"], DList[DString "a"]]),
+      testCase "list with different types" $
+        parseDocument (testCases !! 8) @?= Right (DList[DString "a", DInteger 1, DNull]),
+      testCase "triple nested list with a" $
+        parseDocument (testCases !! 9) @?= Right (DList[DList[DList[DString "a"]]]),
+      testCase "nested lists"  $
+        parseDocument (testCases !! 10) @?= Right (DList[DList[DInteger 1,DList[DList[DString "a"], DList[DString "b"]], DList[DInteger 2], DNull, DList[DString "c"]], DList[DNull]]),
+      testCase "simple map" $
+        parseDocument (testCases !! 11) @?= Right (DMap[("test", DString "ds")]),
+      testCase "list in map" $
+        parseDocument (testCases !! 12) @?= Right (DList [DMap [("test1", DMap[("tt", DList[DMap[("gggg", DString "abc")], DMap[("aa", DString "aba")]])])], DMap [("test2",DInteger 321)]]),
+      testCase "nested all types" $
+        parseDocument (testCases !! 13) @?= Right (DList [DList [DMap [("test",DInteger 123)]],DList [DList [DMap [("test2",DInteger 321)]]],DList [DMap [("abba",DList [DInteger 45,DInteger 178,DString "abc",DMap [("col",DInteger 5)]])]]]),
+      testCase "incorrect DNull" $
+        parseDocument "---\nnulll" @?= Right (DString "nulll"),
+      testCase "incorrect EOF" $
+        parseDocument "---\n-5\n\n" @?= Left "expected end of the document at char 7: ->\n",
+      testCase "incorrect DString" $
+        parseDocument "---\na::b" @?= Left "expected end of the document at char 5: ->::b",
+      testCase "incorrect DList" $
+        parseDocument "---\n-- 5 " @?= Left "expected end of the document at char 7: ->5 ",
+      testCase "incorrect DMap" $
+        parseDocument "---\nmap:- a" @?= Left "expected end of the document at char 7: ->:- a"
   ]
 
 testCases :: [String]
-testCases = [
+testCases = 
+  [
     unlines
     [
-      "---\n",
+      "---",
       "null"
     ],
     unlines
     [
-      "---\n",
+      "---",
       "123"
     ],
     unlines
     [
-        "---\n",
-        "abc"
+      "---",
+      "abc    "
     ],
     unlines 
     [
-        "---\n",
-        "abc "
+      "---",
+      "abc     \n"
+    ],
+    unlines 
+    [
+      " abc"
+    ],
+    unlines
+    [
+      "---",
+      "- null"
+    ],
+    unlines
+    [
+      "---",
+      "- 1",
+      "  2",
+      "  3"
+    ],
+    unlines
+    [
+      "- a",
+      "- a"
+    ],
+    unlines
+    [
+      "---",
+      "- a",
+      "  1",
+      "  null"
+    ],
+    unlines
+    [
+      "- - - a"
+    ],
+    unlines
+    [
+      "---",
+      "- 1",
+      "  - - a",
+      "    - b",
+      "  - 2",
+      "  null ",
+      "  - c   ",
+      "- null  "
+    ],
+    unlines
+    [
+      "---",
+      "test: ds"
+    ],
+    unlines
+    [
+      "---",
+      "test1:  ",
+      "  tt:    ",
+      "    gggg: abc",
+      "    aa: aba",
+      "test2: 321"
+    ],
+    unlines
+    [
+      "---",
+      "- test: 123",
+      "- - test2: 321",
+      "- abba: ",
+      "    45",
+      "    178",
+      "    abc",
+      "    col: 5"
     ]
   ]
 
@@ -85,28 +183,16 @@ toYamlTests =
     "Document to yaml"
     [ testCase "null" $
         renderDocument DNull 
-          @?= unlines 
-            [
-              "---",
-              "- null"
-            ],
+          @?= "---\nnull",
       testCase "int" $
         renderDocument (DInteger 5) 
-          @?= unlines 
-            [
-              "---",
-              "- 5"
-            ],
+          @?= "---\n5",
       testCase "string" $
         renderDocument (DString "test") 
-          @?= unlines 
-            [
-              "---",
-              "- test"
-            ],
+          @?= "---\ntest",
       testCase "empty list" $
         renderDocument (DList []) 
-          @?= "---\n",
+          @?= "---\n- ",
       testCase "list of ints" $
         renderDocument (DList [DInteger 5, DInteger 6]) 
           @?= unlines

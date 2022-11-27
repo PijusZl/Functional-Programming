@@ -1,5 +1,7 @@
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
+{-# LANGUAGE InstanceSigs #-}
 module Lib3(hint, gameStart, parseDocument, GameStart, Hint) where
 
 import Types (Document(..), FromDocument, fromDocument)
@@ -8,126 +10,329 @@ import Lib1 (State(..), gameStart', dListToIntArray, toggleHints)
 import Data.Maybe
 import Text.Read
 
--- IMPLEMENT
 -- Parses a document from yaml
+
 parseDocument :: String -> Either String Document
-parseDocument [] = Left "empty document"
+parseDocument [] = Right DNull
 parseDocument str = fromParser $ parse str
     where parse s = do
-            (_, r1) <- parseStartDocument s
-            (d, r2) <- parseDocument' r1
-            return (d, r2)
+            ((_, r1), i1) <- optional s 0 parseStartDocument
+            ((_, r2), i2) <- parseEmpty r1 i1
+            ((d1, r3), _) <- parseDocument' r2 i2
+            return (d1, r3)
 
 fromParser :: Either String (Document, String) -> Either String Document
-fromParser (Left s) = Left s
-fromParser (Right (d,_)) = Right d
+fromParser (Left str) = Left str
+fromParser (Right (doc,_)) = Right doc
 
-parseStartDocument :: String -> Either String (Document, String)
-parseStartDocument str = do
-    (_, r1) <- parseChar '-' str
-    (_, r2) <- parseChar '-' r1
-    (_, r3) <- parseChar '-' r2
-    -- optional space
-    (_, r5) <- parseChar '\n' r3
-    return (DNull, r5)
+parseStartDocument :: String -> Int -> Either String ((Document, String), Int)
+parseStartDocument str index = do
+    ((_, r1), i1) <- parseChar '-' str index
+    ((_, r2), i2) <- parseChar '-' r1 i1
+    ((_, r3), i3) <- parseChar '-' r2 i2
+    ((_, r4), i4) <- parseSpace r3 i3
+    ((_, r5), i5) <- parseChar '\n' r4 i4
+    return ((DNull, r5), i5)
 
-parseDocument' :: String -> Either String (Document, String)
-parseDocument' [] = Right (DNull, "")
-parseDocument' str = checkEOF $ parseDocumentType str
--- parseDocument' str = orParser (orParser (checkEOF $ parseDocumentType str) (checkEOF $ parseDocumentMap str)) (checkEOF $ parseDocumentList str)
+parseEmpty :: String -> Int -> Either String ((Document, String), Int)
+parseEmpty [] index = Right ((DNull, ""), index)
+parseEmpty str index =
+     if head str == ' ' || head str == '\n'
+         then Left $ "expected type, list, map or empty document at char " ++ show index ++": ->" ++ str -- : " ++ show index
+         else Right ((DNull, str), index)
 
-checkEOF :: Either String (Document, String) -> Either String (Document, String)
-checkEOF (Right (d, s))
-            | s == ""   = Right (d, s)
-            | otherwise = Left "expected end of the document"
-checkEOF l = l
+parseDocument' :: String -> Int -> Either String ((Document, String), Int)
+parseDocument' [] index = Right ((DString "", ""), index)
+parseDocument' str index = do
+    ((d, r), i) <- checkEOF $ orParser (orParser (parseDocumentLists str index 0) (parseDocumentMaps str index 0)) (parseDocumentType str index)
+    return ((d, r), i)
 
-parseDocumentType :: String -> Either String (Document, String)
-parseDocumentType str = orParser (orParser (parseDocumentInt str) (parseDocumentNull str)) (parseDocumentString str)
+parseDocumentType :: String -> Int -> Either String ((Document, String), Int)
+parseDocumentType str index = orParser (orParser (parseDocumentInt str index) (parseDocumentNull str index)) (parseDocumentString str index)
 
-parseDocumentInt :: String -> Either String (Document, String)
-parseDocumentInt str = do
-    (i, r) <- parseInteger str
-    return (DInteger i, r)
+parseDocumentInt :: String -> Int -> Either String ((Document, String), Int)
+parseDocumentInt str index = do
+    ((d, r1), i1) <- parseInteger str index
+    ((_, r2), i2) <- parseRemainingLine r1 i1
+    return ((DInteger d, r2), i2)
 
-parseInteger :: String -> Either String (Int, String)
-parseInteger str =
+parseInteger :: String -> Int -> Either String ((Int, String), Int)
+parseInteger str index =
     let
         prefix = takeWhile isNotSeparator str
     in
         case prefix of
-            [] -> Left $ "integer expected" -- at line " ++ "" ++ ", character " ++ ""
+            [] -> Left $ "integer expected at char " ++ show index ++": ->" ++ str 
             _ -> if isNothing (readMaybe prefix :: Maybe Int)
-                    then Left $ "integer expected"
-                    else Right (read prefix, drop (length prefix) str)
+                    then Left $ "integer expected at char " ++ show index ++": ->" ++ str 
+                    else Right ((read prefix, drop (length prefix) str), index + length prefix)
 
-parseDocumentNull :: String -> Either String (Document, String)
-parseDocumentNull str = do
-    (_, r) <- parseNull str
-    return (DNull, r)
+parseDocumentNull :: String -> Int -> Either String ((Document, String), Int)
+parseDocumentNull str index = do
+    ((_, r1), i1) <- parseNull str index
+    ((_, r2), i2) <- parseRemainingLine r1 i1
+    return ((DNull, r2), i2)
 
-parseNull :: String -> Either String (String, String)
-parseNull str = do
-    (_, r1) <- parseChar 'n' str
-    (_, r2) <- parseChar 'u' r1
-    (_, r3) <- parseChar 'l' r2
-    (_, r4) <- parseChar 'l' r3
-    return ("", r4)
+parseNull :: String -> Int -> Either String ((String, String), Int)
+parseNull str index = do
+    ((_, r1), i1) <- parseChar 'n' str index
+    ((_, r2), i2) <- parseChar 'u' r1 i1
+    ((_, r3), i3) <- parseChar 'l' r2 i2
+    ((_, r4), i4) <- parseChar 'l' r3 i3
+    case head r4 of
+        ' ' -> return (("", r4), i4)
+        '\0'  -> return (("", r4), i4)
+        '\n'  -> return (("", r4), i4)
+        _ -> Left $ "expected separator between null at char " ++ show i4 ++": ->" ++ str 
 
-parseDocumentString :: String -> Either String (Document, String)
-parseDocumentString str = do
-    (s, r) <- parseString str
-    return (DString s, r)
+parseDocumentString :: String -> Int -> Either String ((Document, String), Int)
+parseDocumentString str index = do
+    ((d, r1), i1) <- parseString str index
+    ((_, r2), i2) <- parseRemainingLine r1 i1
+    return ((DString d, r2), i2)
 
-parseString :: String -> Either String (String, String)
-parseString str =
+parseString :: String -> Int -> Either String ((String, String), Int)
+parseString str index =
     let
         prefix = takeWhile isNotSeparator str
     in
-        case prefix of
-            [] -> Left $ "string expected"
-            _  -> Right (prefix, drop (length prefix) str)
+        Right ((prefix, drop (length prefix) str), index + length prefix)
+        -- case prefix of
+        --     [] -> Left $ "string expected at char: " ++ show index
+        --     _  -> Right ((prefix, drop (length prefix) str), index + length prefix)
+
+parseChar :: Char -> String -> Int -> Either String ((Char, String), Int)
+parseChar ch [] index = Left $ ch : " expected at char " ++ show index ++": -> " 
+parseChar ch (x:xs) index
+                        | ch == x   = Right ((x, xs), index + 1)
+                        | otherwise = Left $ ch : " expected at char " ++ show index ++": ->" 
 
 isNotSeparator :: Char -> Bool
-isNotSeparator c = c /= ' ' && c /= '\n'
+isNotSeparator ch = ch /= ' ' && ch /= '\n' && ch /= ':'
 
---parseSpace :: String -> Either String (String, String)
+-- list parser
 
-parseChar :: Char -> String -> Either String (Char, String)
-parseChar ch [] = Left $ ch : " expected"
-parseChar ch (x:xs) | ch == x   = Right (x, xs)
-                    | otherwise = Left $ ch : " expected"
+parseDocumentLists :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentLists str index acc = do
+    (((d, r), i), _) <- orParser' (manyDocumentList str index acc) (oneDocumentList str index acc)
+    return ((d, r), i)
 
-orParser :: Either String (a, String) -> Either String (a, String) -> Either String (a, String)
+oneDocumentList :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
+oneDocumentList str index acc = do
+    ((l, r), i) <- parseDocumentList str index acc
+    return (((l, r), i), acc)
+
+manyDocumentList :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
+manyDocumentList str index acc = do
+    ((l1, r1), i1) <- parseDocumentList str index acc
+    ((l2, r2), i2) <- many' r1 i1 acc parseDocumentList
+    return (((DList (l1:l2), r2), i2), acc)
+
+parseDocumentList :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentList str index acc = do
+    (((d, r), i), _) <- parseList str index (acc + 2)
+    return ((DList d, r), i)
+
+parseDocumentList' :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentList' str index acc = orParser (orParser (parseDocumentList str index acc) (parseDocumentMap str index acc)) (parseDocumentType str index)
+
+parseDocumentList'' :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentList'' str index acc = orParser (parseDocumentList str index acc) (parseDocumentType str index)
+
+parseList :: String -> Int -> Int -> Either String ((([Document], String), Int), Int)
+parseList str index acc = do
+    ((_, r1), i1) <- parseChar '-' str index
+    ((_, r2), i2) <- parseChar ' ' r1 i1
+    (((l, r3), i3), a) <- orParser' (manyList r2 i1 acc) (oneList r2 i2 acc)
+    return (((l, r3), i3), a)
+
+oneList :: String -> Int -> Int -> Either String ((([Document], String), Int), Int)
+oneList str index acc = do
+    ((l, r), i) <- parseDocumentList' str index acc
+    return ((([l], r), i), acc)
+
+manyList :: String -> Int -> Int -> Either String ((([Document], String), Int), Int)
+manyList str index acc = do
+    ((l1, r1), i1) <- parseDocumentList' str index acc
+    (((l2, r2), i2), a) <- many r1 i1 acc repeatParseList
+    return (((l1:l2, r2), i2), a)
+
+repeatParseList :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
+repeatParseList str index acc = do
+    ((_, r1), i1) <- parseIndentation str index acc
+    ((l, r2), i2) <- parseDocumentList'' r1 i1 acc
+    return (((l, r2), i2), acc)
+
+-- map parser
+
+parseDocumentMaps :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentMaps str index acc = do
+    (((d, r), i), _) <- orParser' (manyDocumentMap str index acc) (oneDocumentMap str index acc)
+    return ((d, r), i)
+
+oneDocumentMap :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
+oneDocumentMap str index acc = do
+    ((l, r), i) <- parseDocumentMap str index acc
+    return (((l, r), i), acc)
+
+manyDocumentMap :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
+manyDocumentMap str index acc = do
+    ((l1, r1), i1) <- parseDocumentMap str index acc
+    ((l2, r2), i2) <- many' r1 i1 acc parseDocumentMap
+    return (((DList (l1:l2), r2), i2), acc)
+
+parseDocumentMap :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentMap str index acc = do
+    (((d, r), i), _) <- parseMap str index (acc + 2)
+    return ((DMap d, r), i)
+
+parseDocumentMap' :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentMap' str index acc = orParser (orParser (parseDocumentList str index acc) (parseDocumentMap str index acc)) (parseDocumentType str index)
+
+parseDocumentMap'' :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentMap'' str index acc = orParser (parseDocumentMap str index acc) (parseDocumentType str index)
+
+parseMap :: String -> Int -> Int -> Either String ((([(String, Document)], String), Int), Int)
+parseMap str index acc = do
+    ((n, r1), i1) <- parseString str index
+    ((_, r2), i2) <- parseChar ':' r1 i1
+    ((_, r3), i3) <- orParser (parseChar ' ' r2 i2) (parseChar '\n' r2 i2)
+    ((_, r4), i4) <- optional'' r3 i3 acc skipToIndentation
+    (((m, r5), i5), a) <- orParser' (manyMap r4 i4 acc n) (oneMap r4 i4 acc n)
+    --let mtuple = fmap (makeTuple n) m
+    return (((m, r5), i5), a)
+
+makeTuple :: String -> Document -> (String, Document)
+makeTuple str doc = (str, doc)
+
+oneMap :: String -> Int -> Int -> String -> Either String ((([(String, Document)], String), Int), Int)
+oneMap str index acc name = do
+    ((l, r), i) <- parseDocumentMap' str index acc
+    return ((([(name, l)], r), i), acc)
+
+manyMap :: String -> Int -> Int -> String -> Either String ((([(String, Document)], String), Int), Int)
+manyMap str index acc name = do
+    ((l1, r1), i1) <- parseDocumentMap' str index acc
+    (((l2, r2), i2), a) <- many r1 i1 acc repeatParseMap
+    return ((([(name ,DList (l1:l2))], r2), i2), a)
+
+repeatParseMap :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
+repeatParseMap str index acc = do
+    ((_, r1), i1) <- parseIndentation str index acc
+    ((l, r2), i2) <- parseDocumentMap'' r1 i1 acc
+    return (((l, r2), i2), acc)
+
+-- supporting functions
+
+checkEOF :: Either String ((Document, String), Int) -> Either String ((Document, String), Int)
+checkEOF (Right ((doc, str), index)) =
+    if str == ""
+        then Right ((doc, str), index)
+        else Left $ "expected end of the document at char " ++ show index ++": ->" ++ str 
+checkEOF (Left e) = Left e
+
+parseRemainingLine :: String -> Int -> Either String ((String, String), Int)
+parseRemainingLine str index = do
+    ((_, r1), i1) <- parseSpace str index
+    ((_, r2), i2) <- optional' '\n' r1 i1 parseChar
+    return (("", r2), i2)
+
+parseSpace :: String -> Int -> Either String ((String, String), Int)
+parseSpace str index =
+    let
+        prefix = takeWhile (== ' ') str
+    in
+        Right ((prefix, drop (length prefix) str), index + length prefix)
+
+skipToIndentation :: String -> Int -> Int -> Either String ((Document, String), Int)
+skipToIndentation str index acc = do
+    ((_, r1), i1) <- parseRemainingLine str index
+    ((_, r2), i2) <- parseIndentation r1 i1 acc
+    return ((DNull, r2), i2)
+
+parseIndentation :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseIndentation = checkIndent'
+    where
+        checkIndent' s i a =
+            if a > 0
+                then
+                    case parseChar ' ' s i of
+                        Left _ -> Left $ "invalid identation at char " ++ show i ++": ->" ++ s 
+                        Right ((_, r1), i1) -> checkIndent' r1 i1 (a - 1)
+                else Right ((DNull, s), i)
+
+many :: String -> Int -> Int -> (String -> Int -> Int -> Either String (((a, String), Int), Int)) -> Either String ((([a], String), Int), Int)
+many str index acc parser = manyIn str index acc []
+    where
+        manyIn s i a [] =
+             case parser s i a of
+                Left e -> Left e
+                Right (((t1, r1), i1), a1) -> manyIn r1 i1 a1 [t1]
+        manyIn s i a ac =
+            case parser s i a of
+                Left _ -> Right (((reverse ac, s), i), a)
+                Right (((t1, r1), i1), a1) -> manyIn r1 i1 a1 (t1:ac)
+
+many' :: String -> Int -> Int -> (String -> Int -> Int -> Either String ((a, String), Int)) -> Either String (([a], String), Int)
+many' str index acc parser = manyIn' str index acc []
+    where
+        manyIn' s i a [] =
+             case parser s i a of
+                Left e -> Left e
+                Right ((t1, r1), i1) -> manyIn' r1 i1 a [t1]
+        manyIn' s i a ac =
+            case parser s i a of
+                Left _ -> Right ((reverse ac, s), i)
+                Right ((t1, r1), i1) -> manyIn' r1 i1 a (t1:ac)
+
+optional :: String -> Int -> (String -> Int -> Either String ((Document, String), Int)) -> Either String ((Document, String), Int)
+optional str index parser =
+    case parser str index of
+        Left _ -> Right ((DNull, str), index)
+        Right d -> Right d
+
+optional' :: Char -> String -> Int -> (Char -> String -> Int -> Either String ((Char, String), Int)) -> Either String ((Char, String), Int)
+optional' char str index parser =
+    case parser char str index of
+        Left _ -> Right ((char, str), index)
+        Right d -> Right d
+
+optional'' :: String -> Int -> Int -> (String -> Int -> Int -> Either String ((Document, String), Int)) -> Either String ((Document, String), Int)
+optional'' str index acc parser =
+    case parser str index acc of
+        Left _ -> Right ((DNull, str), index)
+        Right d -> Right d
+
+orParser :: Either String ((a, String), Int) -> Either String ((a, String), Int) -> Either String ((a, String), Int)
 orParser parser1 parser2 =
     case parser1 of
         Right a -> Right a
         Left _ -> parser2
 
--- IMPLEMENT
--- Change right hand side as you wish
--- You will have to create an instance of FromDocument
+orParser' :: Either String (((a, String), Int), Int) -> Either String (((a, String), Int), Int) -> Either String (((a, String), Int), Int)
+orParser' parser1 parser2 =
+    case parser1 of
+        Right a1 -> Right a1
+        Left _ ->
+            case parser2 of
+                Right a2 -> Right a2
+                Left _ -> parser1
+
 data GameStart = GameStart {
     start :: Document
 } deriving Show
 
 instance FromDocument GameStart where
+    fromDocument :: Document -> Either String GameStart
     fromDocument DNull = Left "null Document"
     fromDocument (DInteger _) = Left "can not read from integer"
     fromDocument (DString _) = Left "can not read from string"
-    fromDocument (DList _) = Left "can not read from list"
+    fromDocument (DList l) = Right (GameStart (DMap[("game", DList l)]))
     fromDocument d = Right (GameStart d)
 
-
--- This adds game data to initial state
--- Errors are not reported since GameStart is already totally valid adt
--- containing all fields needed
 gameStart :: State -> GameStart -> State
 gameStart (State c r s) (GameStart d) = gameStart'(State c r s) (show d)
 
--- IMPLEMENT
--- Change right hand side as you wish
--- You will have to create an instance of FromDocument
 data Hint = Hint {
     hlist :: [Document]
 } deriving Show
@@ -140,8 +345,5 @@ instance FromDocument Hint where
     fromDocument (DMap (("coords" , DList documents) : _)) = Right (Hint documents)
     fromDocument _ = Left "coords in hint document not found"
 
--- Adds hint data to the game state
--- Errors are not reported since GameStart is already totally valid adt
--- containing all fields needed
 hint :: State -> Hint -> State
 hint (State c r s) (Hint d) = State {cols = c, rows = r, ships = toggleHints s (dListToIntArray d) }

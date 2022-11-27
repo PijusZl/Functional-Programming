@@ -1,12 +1,14 @@
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE InstanceSigs #-}
 module Lib2(renderDocument, hint, gameStart) where
 
 import Types ( ToDocument(..), Document (..), Check (..), Coord(..) )
 import Lib1 (State(..), gameStart', dListToIntArray, toggleHints)
 
 instance ToDocument Check where
-    toDocument (Check []) = DNull
+    toDocument :: Check -> Document
+    toDocument (Check []) = DMap[("coords", DList[])]
     toDocument (Check c) = DList (addToList c)
 
 addToList :: [Coord] -> [Document]
@@ -18,11 +20,15 @@ addCoord = DInteger
 
 --Document to yaml
 renderDocument :: Document -> String
-renderDocument (DInteger x) = "---\n" ++ "- " ++ show x ++ "\n"
-renderDocument DNull = "---\n" ++ "- null\n"
-renderDocument (DString x) = "---\n" ++ "- " ++ x ++ "\n"
-renderDocument (DList l) = "---\n" ++ renderDList l ""
+renderDocument (DInteger x) = "---\n" ++ show x
+renderDocument DNull = "---\n" ++ "null"
+renderDocument (DString x) = "---\n" ++ x 
+renderDocument (DList l) = "---\n" ++ renderDListEmpty l ""
 renderDocument (DMap m) = "---\n" ++ renderDMap m ""
+
+renderDListEmpty :: [Document] -> String -> String
+renderDListEmpty [] _ = "- "
+renderDListEmpty l s = renderDList l s
 
 renderDList :: [Document] -> String -> String
 renderDList (DNull : xs) i = i ++ "- null\n" ++ renderDList xs i
