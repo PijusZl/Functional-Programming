@@ -51,9 +51,9 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "string" $
         parseDocument (testCases !! 2) @?= Right (DString "abc"),
       testCase "no EOF" $
-        parseDocument (testCases !! 3) @?= Left "expected end of the document at char: 13",
+        parseDocument (testCases !! 3) @?= Left "expected end of the document at char 13: ->\n",
       testCase "expected type" $
-        parseDocument (testCases !! 4) @?= Left "expected type, list, map or empty document at char: 0",
+        parseDocument (testCases !! 4) @?= Left "expected type, list, map or empty document at char 0: -> abc\n",
       testCase "list with null" $
         parseDocument (testCases !! 5) @?= Right (DList[DNull]),
       testCase "list with integers" $
@@ -69,19 +69,19 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "simple map" $
         parseDocument (testCases !! 11) @?= Right (DMap[("test", DString "ds")]),
       testCase "list in map" $
-        parseDocument (testCases !! 12) @?= Right (DList [DMap [("test1",DList [DMap [("tt",DString "abc")],DMap [("gggg",DInteger 123)]])],DMap [("test2",DInteger 321)]]),
+        parseDocument (testCases !! 12) @?= Right (DList [DMap [("test1", DMap[("tt", DList[DMap[("gggg", DString "abc")], DMap[("aa", DString "aba")]])])], DMap [("test2",DInteger 321)]]),
       testCase "nested all types" $
         parseDocument (testCases !! 13) @?= Right (DList [DList [DMap [("test",DInteger 123)]],DList [DList [DMap [("test2",DInteger 321)]]],DList [DMap [("abba",DList [DInteger 45,DInteger 178,DString "abc",DMap [("col",DInteger 5)]])]]]),
       testCase "incorrect DNull" $
         parseDocument "---\nnulll" @?= Right (DString "nulll"),
       testCase "incorrect EOF" $
-        parseDocument "---\n-5\n\n" @?= Left "expected end of the document at char: 7",
+        parseDocument "---\n-5\n\n" @?= Left "expected end of the document at char 7: ->\n",
       testCase "incorrect DString" $
-        parseDocument "---\na::b" @?= Left "expected end of the document at char: 5",
+        parseDocument "---\na::b" @?= Left "expected end of the document at char 5: ->::b",
       testCase "incorrect DList" $
-        parseDocument "---\n-- 5 " @?= Left "expected end of the document at char: 7",
+        parseDocument "---\n-- 5 " @?= Left "expected end of the document at char 7: ->5 ",
       testCase "incorrect DMap" $
-        parseDocument "---\nmap:- a" @?= Left "expected end of the document at char: 7"
+        parseDocument "---\nmap:- a" @?= Left "expected end of the document at char 7: ->:- a"
   ]
 
 testCases :: [String]
@@ -159,8 +159,9 @@ testCases =
     [
       "---",
       "test1:  ",
-      "  tt: abc",
-      "  gggg: 123",
+      "  tt:    ",
+      "    gggg: abc",
+      "    aa: aba",
       "test2: 321"
     ],
     unlines

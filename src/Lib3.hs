@@ -38,7 +38,7 @@ parseEmpty :: String -> Int -> Either String ((Document, String), Int)
 parseEmpty [] index = Right ((DNull, ""), index)
 parseEmpty str index =
      if head str == ' ' || head str == '\n'
-         then Left $ "expected type, list, map or empty document at char: " ++ show index
+         then Left $ "expected type, list, map or empty document at char " ++ show index ++": ->" ++ str -- : " ++ show index
          else Right ((DNull, str), index)
 
 parseDocument' :: String -> Int -> Either String ((Document, String), Int)
@@ -62,9 +62,9 @@ parseInteger str index =
         prefix = takeWhile isNotSeparator str
     in
         case prefix of
-            [] -> Left $ "integer expected at char: " ++ show index
+            [] -> Left $ "integer expected at char " ++ show index ++": ->" ++ str 
             _ -> if isNothing (readMaybe prefix :: Maybe Int)
-                    then Left $ "integer expected at char: " ++ show index
+                    then Left $ "integer expected at char " ++ show index ++": ->" ++ str 
                     else Right ((read prefix, drop (length prefix) str), index + length prefix)
 
 parseDocumentNull :: String -> Int -> Either String ((Document, String), Int)
@@ -83,7 +83,7 @@ parseNull str index = do
         ' ' -> return (("", r4), i4)
         '\0'  -> return (("", r4), i4)
         '\n'  -> return (("", r4), i4)
-        _ -> Left "expected separator between null"
+        _ -> Left $ "expected separator between null at char " ++ show i4 ++": ->" ++ str 
 
 parseDocumentString :: String -> Int -> Either String ((Document, String), Int)
 parseDocumentString str index = do
@@ -96,15 +96,16 @@ parseString str index =
     let
         prefix = takeWhile isNotSeparator str
     in
-        case prefix of
-            [] -> Left $ "string expected at char: " ++ show index
-            _  -> Right ((prefix, drop (length prefix) str), index + length prefix)
+        Right ((prefix, drop (length prefix) str), index + length prefix)
+        -- case prefix of
+        --     [] -> Left $ "string expected at char: " ++ show index
+        --     _  -> Right ((prefix, drop (length prefix) str), index + length prefix)
 
 parseChar :: Char -> String -> Int -> Either String ((Char, String), Int)
-parseChar ch [] index = Left $ ch : " expected at char: " ++ show index
+parseChar ch [] index = Left $ ch : " expected at char " ++ show index ++": -> " 
 parseChar ch (x:xs) index
                         | ch == x   = Right ((x, xs), index + 1)
-                        | otherwise = Left $ ch : " expected at char: " ++ show index
+                        | otherwise = Left $ ch : " expected at char " ++ show index ++": ->" 
 
 isNotSeparator :: Char -> Bool
 isNotSeparator ch = ch /= ' ' && ch /= '\n' && ch /= ':'
@@ -195,7 +196,7 @@ parseMap :: String -> Int -> Int -> Either String ((([(String, Document)], Strin
 parseMap str index acc = do
     ((n, r1), i1) <- parseString str index
     ((_, r2), i2) <- parseChar ':' r1 i1
-    ((_, r3), i3) <- parseChar ' ' r2 i2
+    ((_, r3), i3) <- orParser (parseChar ' ' r2 i2) (parseChar '\n' r2 i2)
     ((_, r4), i4) <- optional'' r3 i3 acc skipToIndentation
     (((m, r5), i5), a) <- orParser' (manyMap r4 i4 acc n) (oneMap r4 i4 acc n)
     --let mtuple = fmap (makeTuple n) m
@@ -227,7 +228,7 @@ checkEOF :: Either String ((Document, String), Int) -> Either String ((Document,
 checkEOF (Right ((doc, str), index)) =
     if str == ""
         then Right ((doc, str), index)
-        else Left $ "expected end of the document at char: " ++ show index
+        else Left $ "expected end of the document at char " ++ show index ++": ->" ++ str 
 checkEOF (Left e) = Left e
 
 parseRemainingLine :: String -> Int -> Either String ((String, String), Int)
@@ -256,7 +257,7 @@ parseIndentation = checkIndent'
             if a > 0
                 then
                     case parseChar ' ' s i of
-                        Left _ -> Left $ "invalid identation at char: " ++ show i
+                        Left _ -> Left $ "invalid identation at char " ++ show i ++": ->" ++ s 
                         Right ((_, r1), i1) -> checkIndent' r1 i1 (a - 1)
                 else Right ((DNull, s), i)
 
@@ -326,7 +327,7 @@ instance FromDocument GameStart where
     fromDocument DNull = Left "null Document"
     fromDocument (DInteger _) = Left "can not read from integer"
     fromDocument (DString _) = Left "can not read from string"
-    fromDocument (DList _) = Left "can not read from list"
+    fromDocument (DList l) = Right (GameStart (DMap[("game", DList l)]))
     fromDocument d = Right (GameStart d)
 
 gameStart :: State -> GameStart -> State

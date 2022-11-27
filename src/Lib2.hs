@@ -1,12 +1,14 @@
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE InstanceSigs #-}
 module Lib2(renderDocument, hint, gameStart) where
 
 import Types ( ToDocument(..), Document (..), Check (..), Coord(..) )
 import Lib1 (State(..), gameStart', dListToIntArray, toggleHints)
 
 instance ToDocument Check where
-    toDocument (Check []) = DNull
+    toDocument :: Check -> Document
+    toDocument (Check []) = DMap[("coords", DList[])]
     toDocument (Check c) = DList (addToList c)
 
 addToList :: [Coord] -> [Document]
