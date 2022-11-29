@@ -25,14 +25,14 @@ fromParser :: Either String (Document, String) -> Either String Document
 fromParser (Left str) = Left str
 fromParser (Right (doc,_)) = Right doc
 
-parseStartDocument :: String -> Int -> Either String ((Document, String), Int)
+parseStartDocument :: String -> Int -> Either String ((String, String), Int)
 parseStartDocument str index = do
     ((_, r1), i1) <- parseChar '-' str index
     ((_, r2), i2) <- parseChar '-' r1 i1
     ((_, r3), i3) <- parseChar '-' r2 i2
     ((_, r4), i4) <- parseSpace r3 i3
     ((_, r5), i5) <- parseChar '\n' r4 i4
-    return ((DNull, r5), i5)
+    return (("", r5), i5)
 
 parseEmpty :: String -> Int -> Either String ((Document, String), Int)
 parseEmpty [] index = Right ((DNull, ""), index)
@@ -96,10 +96,9 @@ parseString str index =
     let
         prefix = takeWhile isNotSeparator str
     in
-        Right ((prefix, drop (length prefix) str), index + length prefix)
-        -- case prefix of
-        --     [] -> Left $ "string expected at char: " ++ show index
-        --     _  -> Right ((prefix, drop (length prefix) str), index + length prefix)
+        case prefix of
+            [] -> Left $ "string expected at char: " ++ show index
+            _  -> Right ((prefix, drop (length prefix) str), index + length prefix)
 
 parseChar :: Char -> String -> Int -> Either String ((Char, String), Int)
 parseChar ch [] index = Left $ ch : " expected at char " ++ show index ++": -> " 
@@ -196,10 +195,9 @@ parseMap :: String -> Int -> Int -> Either String ((([(String, Document)], Strin
 parseMap str index acc = do
     ((n, r1), i1) <- parseString str index
     ((_, r2), i2) <- parseChar ':' r1 i1
-    ((_, r3), i3) <- orParser (parseChar ' ' r2 i2) (parseChar '\n' r2 i2)
-    ((_, r4), i4) <- optional'' r3 i3 acc skipToIndentation
+    ((_, _), _) <- orParser (parseChar ' ' r2 i2) (parseChar '\n' r2 i2)
+    ((_, r4), i4) <- orParser (skipToIndentation r2 i2 acc) (parseRemainingLine r2 i2)
     (((m, r5), i5), a) <- orParser' (manyMap r4 i4 acc n) (oneMap r4 i4 acc n)
-    --let mtuple = fmap (makeTuple n) m
     return (((m, r5), i5), a)
 
 makeTuple :: String -> Document -> (String, Document)
@@ -244,11 +242,11 @@ parseSpace str index =
     in
         Right ((prefix, drop (length prefix) str), index + length prefix)
 
-skipToIndentation :: String -> Int -> Int -> Either String ((Document, String), Int)
+skipToIndentation :: String -> Int -> Int -> Either String ((String, String), Int)
 skipToIndentation str index acc = do
     ((_, r1), i1) <- parseRemainingLine str index
     ((_, r2), i2) <- parseIndentation r1 i1 acc
-    return ((DNull, r2), i2)
+    return (("", r2), i2)
 
 parseIndentation :: String -> Int -> Int -> Either String ((Document, String), Int)
 parseIndentation = checkIndent'
@@ -285,22 +283,16 @@ many' str index acc parser = manyIn' str index acc []
                 Left _ -> Right ((reverse ac, s), i)
                 Right ((t1, r1), i1) -> manyIn' r1 i1 a (t1:ac)
 
-optional :: String -> Int -> (String -> Int -> Either String ((Document, String), Int)) -> Either String ((Document, String), Int)
+optional :: String -> Int -> (String -> Int -> Either String ((String, String), Int)) -> Either String ((String, String), Int)
 optional str index parser =
     case parser str index of
-        Left _ -> Right ((DNull, str), index)
+        Left _ -> Right (("", str), index)
         Right d -> Right d
 
 optional' :: Char -> String -> Int -> (Char -> String -> Int -> Either String ((Char, String), Int)) -> Either String ((Char, String), Int)
 optional' char str index parser =
     case parser char str index of
         Left _ -> Right ((char, str), index)
-        Right d -> Right d
-
-optional'' :: String -> Int -> Int -> (String -> Int -> Int -> Either String ((Document, String), Int)) -> Either String ((Document, String), Int)
-optional'' str index acc parser =
-    case parser str index acc of
-        Left _ -> Right ((DNull, str), index)
         Right d -> Right d
 
 orParser :: Either String ((a, String), Int) -> Either String ((a, String), Int) -> Either String ((a, String), Int)

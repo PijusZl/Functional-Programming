@@ -159,7 +159,7 @@ testCases =
     [
       "---",
       "test1:  ",
-      "  tt:    ",
+      "  tt:",
       "    gggg: abc",
       "    aa: aba",
       "test2: 321"
