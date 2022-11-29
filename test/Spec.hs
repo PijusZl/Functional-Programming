@@ -2,7 +2,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as Q
 import Data.String.Conversions
-import Data.Yaml as Y ( encode )
+import Data.Yaml as Y ( encodeWith, defaultEncodeOptions, defaultFormatOptions, setWidth, setFormat)
 
 import Lib1 (State(..), generateShips)
 import Lib2 (renderDocument, gameStart, hint)
@@ -20,11 +20,14 @@ main = defaultMain (testGroup "Tests" [
 properties :: TestTree
 properties = testGroup "Properties" [golden, dInt]
 
+friendlyEncode :: Document -> String
+friendlyEncode doc = cs (Y.encodeWith (setFormat (setWidth Nothing defaultFormatOptions) defaultEncodeOptions) doc)
+
 golden :: TestTree
 golden = testGroup "Handles foreign rendering"
   [
     testProperty "parseDocument (Data.Yaml.encode doc) == doc" $
-      \doc -> parseDocument (cs (Y.encode doc)) == Right doc
+      \doc -> parseDocument (friendlyEncode doc) == Right doc
   ]
 
 dInt :: TestTree
