@@ -27,12 +27,8 @@ renderDocument (DList l) = "---\n" ++ renderDListEmpty l ""
 renderDocument (DMap m) = "---\n" ++ renderDMap m ""
 
 renderDListEmpty :: [Document] -> String -> String
-renderDListEmpty [] _ = "[]"
+renderDListEmpty [] _ = "- "
 renderDListEmpty l s = renderDList l s
-
-renderDMapEmpty :: [Document] -> String -> String
-renderDMapEmpty [] _ = "{}"
-renderDMapEmpty l s = renderDList l s
 
 renderDList :: [Document] -> String -> String
 renderDList (DNull : xs) i = i ++ "- null\n" ++ renderDList xs i

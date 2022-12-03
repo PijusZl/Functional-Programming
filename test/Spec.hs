@@ -41,12 +41,12 @@ dogfood = testGroup "Eating your own dogfood"
 fromYamlTests :: TestTree
 fromYamlTests = testGroup "Document from yaml"
   [   
-      testCase "empty" $
-        parseDocument (friendlyEncode (DList [DMap [("is",DMap []),("w",DString "")]])) @?= Right (DList [DMap [("is",DMap []),("w",DString "")]]),
-      -- - is: {}\n
-      --   w: ''\n
-
-      -- "- w: ''\n  is: {}\n"
+      testCase "check equality" $
+        DMap[("t1",DInteger 1), ("t2",DInteger 2)] @?= DMap[("t2",DInteger 2), ("t1",DInteger 1)],
+      testCase "error string" $
+        friendlyEncode (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")]) @?= "ID: -2\nwU:\n- 4np\nf: u4 t\n",
+      testCase "error" $
+        parseDocument (friendlyEncode (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")])) @?= Right (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")]),
       testCase "empty" $
         parseDocument "" @?= Right DNull,
       testCase "empty after start" $
