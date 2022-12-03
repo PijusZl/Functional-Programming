@@ -15,7 +15,8 @@ main = defaultMain (testGroup "Tests" [
   fromYamlTests,
   gameStartTests,
   hintTests,
-  properties])
+  properties
+  ])
 
 properties :: TestTree
 properties = testGroup "Properties" [golden, dogfood]
@@ -40,10 +41,12 @@ dogfood = testGroup "Eating your own dogfood"
 fromYamlTests :: TestTree
 fromYamlTests = testGroup "Document from yaml"
   [   
-      testCase "map with list" $
-        parseDocument (friendlyEncode (DMap [("test", DList[DInteger 1, DInteger 2, DString "a b c"])])) @?= Right (DMap [("test", DList[DInteger 1, DInteger 2, DString "a b c"])]),
       testCase "empty" $
-        parseDocument (friendlyEncode (DList [DList [DMap [("test",DInteger 123)]],DList [DList [DMap [("test2",DInteger 321)]]],DList [DMap [("abba",DList [DInteger 45,DInteger 178,DString "abc",DMap [("col",DInteger 5)]])]]])) @?= Right (DList [DList [DMap [("test",DInteger 123)]],DList [DList [DMap [("test2",DInteger 321)]]],DList [DMap [("abba",DList [DInteger 45,DInteger 178,DString "abc",DMap [("col",DInteger 5)]])]]]),
+        parseDocument (friendlyEncode (DList [DMap [("is",DMap []),("w",DString "")]])) @?= Right (DList [DMap [("is",DMap []),("w",DString "")]]),
+      -- - is: {}\n
+      --   w: ''\n
+
+      -- "- w: ''\n  is: {}\n"
       testCase "empty" $
         parseDocument "" @?= Right DNull,
       testCase "empty after start" $
@@ -88,11 +91,11 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "incorrect EOF" $
         parseDocument "---\n-5\n\n" @?= Left "expected end of the document at char 7: ->\n",
       testCase "incorrect DString" $
-        parseDocument "---\na::b" @?= Left "\n expected at char 5: ->::b",
+        parseDocument "---\na::b" @?= Left "\n expected at char 8: -> ",
       testCase "incorrect DList" $
         parseDocument "---\n-- \n5 " @?= Left "expected end of the document at char 8: ->5 ",
       testCase "incorrect DMap" $
-        parseDocument "---\nmap:- a" @?= Left "\n expected at char 7: ->:- a"
+        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> "
   ]
 
 

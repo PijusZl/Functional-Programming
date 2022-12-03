@@ -175,14 +175,16 @@ parseDocumentLists str index acc = do
 
 oneDocumentList :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
 oneDocumentList str index acc = do
-    ((_, r1), i1) <- parseIndentation str index acc
-    ((l, r2), i2) <- parseDocumentList r1 i1 acc
-    return (((l, r2), i2), acc)
+    --((_, r1), i1) <- parseIndentation str index acc
+    ((_, r2), i2) <- parseChar '-' str index
+    ((_, r3), i3) <- parseChar ' ' r2 i2
+    ((l, r4), i4) <- parseDocumentList' r3 i3 acc
+    return (((DList [l], r4), i4), acc)
 
 manyDocumentList :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
 manyDocumentList str index acc = do
-    ((_, r1), i1) <- parseIndentation str index acc
-    ((_, r2), i2) <- parseChar '-' r1 i1
+    --((_, r1), i1) <- parseIndentation str index acc
+    ((_, r2), i2) <- parseChar '-' str index
     ((_, r3), i3) <- parseChar ' ' r2 i2
     ((l1, r4), i4) <- parseDocumentList' r3 i3 acc
     ((l2, r5), i5) <- many' r4 i4 acc repeatParseDocumentList
@@ -209,10 +211,10 @@ parseDocumentEmptyList str index = do
     return ((DList [], r3), i3)
 
 parseDocumentList' :: String -> Int -> Int -> Either String ((Document, String), Int)
-parseDocumentList' str index acc = orParser (orParser (orParser( orParser (parseDocumentEmptyList str index) (parseDocumentList str index acc)) (parseDocumentEmptyMap str index)) (parseDocumentMap str index acc)) (parseDocumentType str index)
+parseDocumentList' str index acc = orParser (orParser (orParser( orParser (parseDocumentEmptyList str index) (parseDocumentList str index acc)) (parseDocumentEmptyMap str index)) (parseDocumentMaps str index (acc + 2))) (parseDocumentType str index)
 
-parseDocumentList'' :: String -> Int -> Int -> Either String ((Document, String), Int)
-parseDocumentList'' str index acc = orParser (orParser (parseDocumentEmptyList str index) (parseDocumentList str index acc)) (parseDocumentType str index)
+-- parseDocumentList'' :: String -> Int -> Int -> Either String ((Document, String), Int)
+-- parseDocumentList'' str index acc = orParser (orParser (parseDocumentEmptyList str index) (parseDocumentList str index acc)) (parseDocumentType str index)
 
 parseList :: String -> Int -> Int -> Either String ((([Document], String), Int), Int)
 parseList str index acc = do
@@ -249,31 +251,34 @@ parseDocumentMaps str index acc = do
 
 oneDocumentMap :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
 oneDocumentMap str index acc = do
-    ((_, r1), i1) <- parseIndentation str index acc
-    ((n, r2), i2) <- parseDocumentKey r1 i1
+    -- ((_, r1), i1) <- parseIndentation str index acc
+    ((n, r2), i2) <- parseDocumentKey str index
     ((_, r3), i3) <- parseChar ':' r2 i2
-    (((_, r4), i4), _) <- orParser' (skipToIndentation r3 i3 (acc + 2)) (parseSpace r3 i3 acc)
-    ((m, r5), i5) <- parseDocumentMap' r4 i4 acc
-    return (((DMap [(n,m)], r5), i5), acc)
+    -- (((_, r4), i4), _) <- orParser' (skipToIndentation r3 i3 (acc + 2)) (parseSpace r3 i3 acc)
+    -- ((m, r5), i5) <- parseDocumentMap' r4 i4 acc
+    ((m, r4), i4) <- orParser (orParser (parseDocumentMap' r3 i3 acc) (parseDocumentMap'' r3 i3 acc)) (parseDocumentMap''' r3 i3 acc)
+    return (((DMap [(n,m)], r4), i4), acc)
 
 manyDocumentMap :: String -> Int -> Int -> Either String (((Document, String), Int), Int)
 manyDocumentMap str index acc = do
-    ((_, r1), i1) <- parseIndentation str index acc
-    ((n, r2), i2) <- parseDocumentKey r1 i1
+    -- ((_, r1), i1) <- parseIndentation str index acc
+    ((n, r2), i2) <- parseDocumentKey str index
     ((_, r3), i3) <- parseChar ':' r2 i2
-    (((_, r4), i4), _) <- orParser' (skipToIndentation r3 i3 (acc + 2)) (parseSpace r3 i3 acc)
-    ((m1, r5), i5) <- parseDocumentMap' r4 i4 acc
-    ((m2, r6), i6) <- many' r5 i5 acc repeatParseDocumentMap
-    return (((DMap ((n,m1):m2), r6), i6), acc)
+    -- (((_, r4), i4), _) <- orParser' (skipToIndentation r3 i3 (acc + 2)) (parseSpace r3 i3 acc)
+    -- ((m1, r5), i5) <- parseDocumentMap' r4 i4 acc
+    ((m1, r4), i4) <- orParser (orParser (parseDocumentMap' r3 i3 acc) (parseDocumentMap'' r3 i3 acc)) (parseDocumentMap''' r3 i3 acc)
+    ((m2, r5), i5) <- many' r4 i4 acc repeatParseDocumentMap
+    return (((DMap ((n,m1):m2), r5), i5), acc)
 
 repeatParseDocumentMap :: String -> Int -> Int -> Either String (((String, Document), String), Int)
 repeatParseDocumentMap str index acc = do
     ((_, r1), i1) <- parseIndentation str index acc
     ((n, r2), i2) <- parseDocumentKey r1 i1
     ((_, r3), i3) <- parseChar ':' r2 i2
-    (((_, r4), i4), _) <- orParser' (skipToIndentation r3 i3 (acc + 2)) (parseSpace r3 i3 acc)
-    ((m, r5), i5) <- parseDocumentMap' r4 i4 acc
-    return (((n, m), r5), i5)
+    -- (((_, r4), i4), _) <- orParser' (skipToIndentation r3 i3 (acc + 2)) (parseSpace r3 i3 acc)
+    -- ((m, r5), i5) <- parseDocumentMap' r4 i4 acc
+    ((m, r4), i4) <- orParser (orParser (parseDocumentMap' r3 i3 acc) (parseDocumentMap'' r3 i3 acc)) (parseDocumentMap''' r3 i3 acc)
+    return (((n, m), r4), i4)
 
 parseDocumentMap :: String -> Int -> Int -> Either String ((Document,String), Int)
 parseDocumentMap str index acc = do
@@ -288,39 +293,57 @@ parseDocumentEmptyMap str index = do
     ((_, r3), i3) <- parseRemainingLine r2 i2
     return ((DMap [], r3), i3)
 
-parseDocumentMap' :: String -> Int -> Int -> Either String ((Document, String), Int)
-parseDocumentMap' str index acc = orParser (orParser (orParser( orParser (parseDocumentEmptyList str index) (parseDocumentLists str index acc)) (parseDocumentEmptyMap str index)) (parseDocumentMap str index acc)) (parseDocumentType str index)
+-- parseDocumentMap' :: String -> Int -> Int -> Either String ((Document, String), Int)
+-- parseDocumentMap' str index acc = orParser (orParser (orParser( orParser (parseDocumentEmptyList str index) (parseDocumentLists str index acc)) (parseDocumentEmptyMap str index)) (parseDocumentMap str index acc)) (parseDocumentType str index)
 
--- parseDocumentMap'' :: String -> Int -> Int -> Either String ((Document, String), Int)
--- parseDocumentMap'' str index acc = orParser (orParser (parseDocumentEmptyMap str index) (parseDocumentMap str index acc)) (parseDocumentType str index)
+parseDocumentMap' :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentMap' str index acc = do
+    (((_, r1), i1), _) <- skipToIndentation str index (acc + 2)
+    ((d, r2), i2) <- parseDocumentMap r1 i1 acc
+    return ((d, r2), i2)
+
+parseDocumentMap'' :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentMap'' str index acc = do
+    (((_, r1), i1), _) <- skipToIndentation str index acc
+    ((d, r2), i2) <- parseDocumentLists r1 i1 acc
+    return ((d, r2), i2)
+
+parseDocumentMap''' :: String -> Int -> Int -> Either String ((Document, String), Int)
+parseDocumentMap''' str index acc = do
+    (((_, r1), i1), _) <- parseSpace str index acc
+    ((d, r2), i2) <- orParser (orParser (parseDocumentEmptyList r1 i1) (parseDocumentEmptyMap r1 i1)) (parseDocumentType r1 i1)
+    return ((d, r2), i2)
 
 parseMap :: String -> Int -> Int -> Either String ((([(String, Document)], String), Int), Int)
 parseMap str index acc = do
-    ((n, r1), i1) <- parseDocumentKey str index
+    ((k, r1), i1) <- parseDocumentKey str index
     ((_, r2), i2) <- parseChar ':' r1 i1
-    (((_, r3), i3), _) <- orParser' (skipToIndentation r2 i2 (acc + 2)) (parseSpace r2 i2 acc)
-    (((m, r4), i4), _) <- orParser' (manyMap r3 i3 acc n) (oneMap r3 i3 acc n)
-    return (((m, r4), i4), acc)
+    --(((_, r3), i3), _) <- orParser' (skipToIndentation r2 i2 (acc + 2)) (parseSpace r2 i2 acc)
+    (((m, r3), i3), _) <- orParser' (manyMap r2 i2 acc k) (oneMap r2 i2 acc k)
+    return (((m, r3), i3), acc)
 
 oneMap :: String -> Int -> Int -> String -> Either String ((([(String, Document)], String), Int), Int)
 oneMap str index acc key = do
-    ((l, r), i) <- parseDocumentMap' str index acc
-    return ((([(key, l)], r), i), acc)
+    ((m, r), i) <- orParser (orParser (parseDocumentMap' str index acc) (parseDocumentMap'' str index acc)) (parseDocumentMap''' str index acc)
+    -- ((m, r), i) <- parseDocumentMap' str index acc
+    return ((([(key, m)], r), i), acc)
 
 manyMap :: String -> Int -> Int -> String -> Either String ((([(String, Document)], String), Int), Int)
 manyMap str index acc key = do
-    ((l1, r1), i1) <- parseDocumentMap' str index acc
-    (((l2, r2), i2), _) <- many r1 i1 acc repeatParseMap
-    return ((((key ,l1):l2, r2), i2), acc)
+    -- ((l1, r1), i1) <- parseDocumentMap' str index acc
+    ((m1, r1), i1) <- orParser (orParser (parseDocumentMap' str index acc) (parseDocumentMap'' str index acc)) (parseDocumentMap''' str index acc)
+    (((m2, r2), i2), _) <- many r1 i1 acc repeatParseMap
+    return ((((key ,m1):m2, r2), i2), acc)
 
 repeatParseMap :: String -> Int -> Int -> Either String ((((String, Document), String), Int), Int)
 repeatParseMap str index acc = do
     ((_, r1), i1) <- parseIndentation str index acc
-    ((n, r2), i2) <- parseDocumentKey r1 i1
+    ((k, r2), i2) <- parseDocumentKey r1 i1
     ((_, r3), i3) <- parseChar ':' r2 i2
-    (((_, r4), i4), _) <- orParser' (skipToIndentation r3 i3 (acc + 2)) (parseSpace r3 i3 acc)
-    ((m, r5), i5) <- parseDocumentMap' r4 i4 acc
-    return ((((n, m), r5), i5), acc)
+    -- (((_, r4), i4), _) <- orParser' (skipToIndentation r3 i3 (acc + 2)) (parseSpace r3 i3 acc)
+    -- ((m, r5), i5) <- parseDocumentMap' r4 i4 acc
+    ((m, r4), i4) <- orParser (orParser (parseDocumentMap' r3 i3 acc) (parseDocumentMap'' r3 i3 acc)) (parseDocumentMap''' r3 i3 acc)
+    return ((((k, m), r4), i4), acc)
 
 -- supporting functions
 
@@ -328,7 +351,7 @@ checkEOF :: Either String ((Document, String), Int) -> Either String ((Document,
 checkEOF (Right ((doc, str), index)) =
     if str == ""
         then Right ((doc, str), index)
-        else Left $ "expected end of the document \"" ++ show doc ++ "\" at char " ++ show index ++": ->" ++ str
+        else Left $ "expected end of the document at char " ++ show index ++": ->" ++ str
 checkEOF (Left e) = Left e
 
 parseRemainingLine :: String -> Int -> Either String ((String, String), Int)
