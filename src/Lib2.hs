@@ -31,12 +31,16 @@ renderDListEmpty :: [Document] -> String -> String
 renderDListEmpty [] _ = "[]\n"
 renderDListEmpty l i = "---\n" ++ renderDList l i
 
+renderDListEmpty' :: [Document] -> String -> String
+renderDListEmpty' [] _ = "[]\n"
+renderDListEmpty' l i = "- " ++ renderDList l i
+
 renderDList :: [Document] -> String -> String
 renderDList (DNull : xs) i = i ++ "- null\n" ++ renderDList xs i
 renderDList (DString x : xs) i = i ++ "- '" ++ x ++ "'\n" ++ renderDList xs i
 renderDList (DInteger x : xs) i = i ++ "- " ++ show x ++ "\n" ++ renderDList xs i
 renderDList (DList x : xs) i = i ++ "- " ++ renderDList' x (i ++ "  ") ++ renderDList xs i
-renderDList (DMap x : xs) i = i ++ "- " ++ renderDMapEmpty x (i ++ "  ") ++ renderDList xs i
+renderDList (DMap x : xs) i = i ++ "- " ++ renderDMapEmpty' x (i ++ "  ") ++ renderDList xs i
 renderDList [] _ = ""
 
 --without added indentation
@@ -52,21 +56,25 @@ renderDMapEmpty :: [(String, Document)] -> String -> String
 renderDMapEmpty [] _ = "{}\n"
 renderDMapEmpty m i = "---\n" ++ renderDMap m i
 
+renderDMapEmpty' :: [(String, Document)] -> String -> String
+renderDMapEmpty' [] _ = "{}\n"
+renderDMapEmpty' m i = renderDMap' m i
+
 renderDMap :: [(String, Document)] -> String -> String
 renderDMap ((s, DNull) : xs) i = i ++ "'" ++ s ++ "': " ++ "null\n" ++ renderDMap xs i
 renderDMap ((s, DString x) : xs) i = i ++ "'" ++ s ++ "': '" ++ x ++ "'\n" ++ renderDMap xs i 
 renderDMap ((s, DInteger x) : xs) i = i ++ "'" ++ s ++ "': " ++ show x ++ "\n" ++ renderDMap xs i 
-renderDMap ((s, DList x) : xs) i = i ++ "'" ++ s ++ "':\n" ++ renderDListEmpty x (i ++ "  ") ++ renderDMap xs i 
-renderDMap ((s, DMap x) : xs) i = i ++ "'" ++ s ++ "':\n" ++  renderDMap x (i ++ "  ") ++ renderDMap xs i
+renderDMap ((s, DList x) : xs) i = i ++ "'" ++ s ++ "': " ++ renderDListEmpty' x (i ++ "  ") ++ renderDMap xs i 
+renderDMap ((s, DMap x) : xs) i = i ++ "'" ++ s ++ "': " ++  renderDMapEmpty' x (i ++ "  ") ++ renderDMap xs i
 renderDMap [] _ = ""
 
 --without indentation
 renderDMap' :: [(String, Document)] -> String -> String
-renderDMap' ((s, DNull) : xs) i = s ++ ": " ++ "null\n" ++ renderDMap xs i
-renderDMap' ((s, DString x) : xs) i = s ++ ": " ++ x ++ "\n" ++ renderDMap xs i 
-renderDMap' ((s, DInteger x) : xs) i = s ++ ": " ++ show x ++ "\n" ++ renderDMap xs i 
-renderDMap' ((s, DList x) : xs) i = s ++ ":\n" ++ renderDListEmpty x (i ++ "  ") ++ renderDMap xs i 
-renderDMap' ((s, DMap x) : xs) i = s ++ ":\n" ++  renderDMap x (i ++ "  ") ++ renderDMap xs i
+renderDMap' ((s, DNull) : xs) i = "'" ++ s ++ "': " ++ "null\n" ++ renderDMap xs i
+renderDMap' ((s, DString x) : xs) i = "'" ++ s ++ "': '" ++ x ++ "'\n" ++ renderDMap xs i 
+renderDMap' ((s, DInteger x) : xs) i = "'" ++ s ++ "': " ++ show x ++ "\n" ++ renderDMap xs i 
+renderDMap' ((s, DList x) : xs) i = "'" ++ s ++ "':\n" ++ renderDListEmpty' x (i ++ "  ") ++ renderDMap xs i 
+renderDMap' ((s, DMap x) : xs) i = "'" ++ s ++ "': " ++  renderDMapEmpty' x (i ++ "  ") ++ renderDMap xs i
 renderDMap' [] _ = ""
 
 -- IMPLEMENT

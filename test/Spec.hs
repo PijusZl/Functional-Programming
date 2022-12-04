@@ -212,14 +212,14 @@ toYamlTests =
         renderDocument DNull 
           @?= "---\nnull",
           testCase "frend" $
-        friendlyEncode (DMap [("F",DMap [])])
+        friendlyEncode (DList [DString "ge ",DString "  ",DMap [("Fk",DList [DMap [("u",DString "n62"),("a",DString ""),("u",DInteger 3)],DMap [("bX",DString "Y"),("TpA",DInteger (-3)),("rbU",DString "E")]]),("vk",DMap [("LBX",DMap [])]),("Hp",DInteger 0)]])
         @?= "-",
       testCase "int" $
-        renderDocument (DMap [("F",DMap [])]) 
-          @?= "---\n-5\n",
+        renderDocument (DList [DString "ge ",DString "  ",DMap [("Fk",DList [DMap [("u",DString "n62"),("a",DString ""),("u",DInteger 3)],DMap [("bX",DString "Y"),("TpA",DInteger (-3)),("rbU",DString "E")]]),("vk",DMap [("LBX",DMap [])]),("Hp",DInteger 0)]]) 
+          @?= "---\n5\n",
       testCase "string" $
         renderDocument (DString " k") 
-          @?= "'test'",
+          @?= "'test' ",
       testCase "empty list" $
         renderDocument (DList []) 
           @?= "[]\n",
