@@ -95,6 +95,12 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "incorrect DList" $
         parseDocument "---\n-- \n5 " @?= Left "expected end of the document at char 8: ->5 ",
       testCase "incorrect DMap" $
+        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
+      testCase "incorrect DMap" $
+        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
+      testCase "incorrect DMap" $
+        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
+      testCase "incorrect DMap" $
         parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> "
   ]
 
@@ -205,15 +211,18 @@ toYamlTests =
     [ testCase "null" $
         renderDocument DNull 
           @?= "---\nnull",
+          testCase "frend" $
+        friendlyEncode (DMap [("F",DMap [])])
+        @?= "-",
       testCase "int" $
-        renderDocument (DInteger 5) 
-          @?= "---\n5",
+        renderDocument (DMap [("F",DMap [])]) 
+          @?= "---\n-5\n",
       testCase "string" $
-        renderDocument (DString "test") 
-          @?= "---\ntest",
+        renderDocument (DString " k") 
+          @?= "'test'",
       testCase "empty list" $
         renderDocument (DList []) 
-          @?= "---\n- ",
+          @?= "[]\n",
       testCase "list of ints" $
         renderDocument (DList [DInteger 5, DInteger 6]) 
           @?= unlines
