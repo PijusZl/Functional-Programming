@@ -1,8 +1,8 @@
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck as Q
+import Test.Tasty.QuickCheck
 import Data.String.Conversions
-import Data.Yaml as Y ( encode )
+import Data.Yaml as Y ( encodeWith, defaultEncodeOptions, defaultFormatOptions, setWidth, setFormat)
 
 import Lib1 (State(..), generateShips)
 import Lib2 (renderDocument, gameStart, hint)
@@ -15,41 +15,52 @@ main = defaultMain (testGroup "Tests" [
   fromYamlTests,
   gameStartTests,
   hintTests,
-  properties])
+  properties
+  ])
 
 properties :: TestTree
-properties = testGroup "Properties" [golden, dInt]
+properties = testGroup "Properties" [golden, dogfood]
+
+friendlyEncode :: Document -> String
+friendlyEncode doc = cs (Y.encodeWith (setFormat (setWidth Nothing defaultFormatOptions) defaultEncodeOptions) doc)
 
 golden :: TestTree
 golden = testGroup "Handles foreign rendering"
   [
     testProperty "parseDocument (Data.Yaml.encode doc) == doc" $
-      \doc -> parseDocument (cs (Y.encode doc)) == Right doc
+      \doc -> parseDocument (friendlyEncode doc) == Right doc
   ]
 
-dInt :: TestTree
-dInt = testGroup "Document -> renderDocument -> parseDocument"
+dogfood :: TestTree
+dogfood = testGroup "Eating your own dogfood"
   [  
-    Q.testProperty "parseDocument (renderDocument doc) == doc" $
-      \doc -> (parseDocument (renderDocument (doc::Document))) == Right doc
+    testProperty "parseDocument (renderDocument doc) == doc" $
+      \doc -> parseDocument (renderDocument doc) == Right doc
   ]
 
 fromYamlTests :: TestTree
 fromYamlTests = testGroup "Document from yaml"
-  [   testCase "empty" $
+  [   
+      testCase "check equality" $
+        DMap[("t1",DInteger 1), ("t2",DInteger 2)] @?= DMap[("t2",DInteger 2), ("t1",DInteger 1)],
+      testCase "error string" $
+        friendlyEncode (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")]) @?= "ID: -2\nwU:\n- 4np\nf: u4 t\n",
+      testCase "error" $
+        parseDocument (friendlyEncode (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")])) @?= Right (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")]),
+      testCase "empty" $
         parseDocument "" @?= Right DNull,
       testCase "empty after start" $
-        parseDocument "---\n" @?= Right (DString ""),
+        parseDocument "---\n" @?= Right DNull,
       testCase "incorrect start" $
-        parseDocument "---" @?= Right (DString "---"),
+        parseDocument "---" @?= Left "\n expected at char 3: -> ",
       testCase "integer without start" $
-        parseDocument "123" @?= Right (DInteger 123),
+        parseDocument "123\n" @?= Right (DInteger 123),
       testCase "null" $
         parseDocument (testCases !! 0) @?= Right DNull,
       testCase "integer" $
         parseDocument (testCases !! 1) @?= Right (DInteger 123),
       testCase "string" $
-        parseDocument (testCases !! 2) @?= Right (DString "abc"),
+        parseDocument (testCases !! 2) @?= Right (DString "abc    "),
       testCase "no EOF" $
         parseDocument (testCases !! 3) @?= Left "expected end of the document at char 13: ->\n",
       testCase "expected type" $
@@ -65,24 +76,29 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "triple nested list with a" $
         parseDocument (testCases !! 9) @?= Right (DList[DList[DList[DString "a"]]]),
       testCase "nested lists"  $
-        parseDocument (testCases !! 10) @?= Right (DList[DList[DInteger 1,DList[DList[DString "a"], DList[DString "b"]], DList[DInteger 2], DNull, DList[DString "c"]], DList[DNull]]),
+        parseDocument (testCases !! 10) @?= Right (DList[DList[DInteger 1,DList[DString "a", DString "b"], DInteger 2, DNull, DString "c"], DNull]),
       testCase "simple map" $
         parseDocument (testCases !! 11) @?= Right (DMap[("test", DString "ds")]),
       testCase "list in map" $
-        parseDocument (testCases !! 12) @?= Right (DList [DMap [("test1", DMap[("tt", DList[DMap[("gggg", DString "abc")], DMap[("aa", DString "aba")]])])], DMap [("test2",DInteger 321)]]),
+        parseDocument (friendlyEncode (DMap [("test1", DMap[("tt1", DMap[("gggg", DString "abc"), ("aa", DString "aba")]), ("tt2", DMap[("gggg", DString "abc"), ("aa", DString "aba")])])])) @?= Right (DMap [("test1", DMap[("tt1", DMap[("gggg", DString "abc"), ("aa", DString "aba")]), ("tt2", DMap[("gggg", DString "abc"), ("aa", DString "aba")])])]), -- ("test2", DInteger 321)
       testCase "nested all types" $
-        parseDocument (testCases !! 13) @?= Right (DList [DList [DMap [("test",DInteger 123)]],DList [DList [DMap [("test2",DInteger 321)]]],DList [DMap [("abba",DList [DInteger 45,DInteger 178,DString "abc",DMap [("col",DInteger 5)]])]]]),
+        -- parseDocument (testCases !! 13) @?= Right (DList [DList [DMap [("test",DInteger 123)]],DList [DList [DMap [("test2",DInteger 321)]]],DList [DMap [("abba",DList [DInteger 45,DInteger 178,DString "abc",DMap [("col",DInteger 5)]])]]]),
+        parseDocument (friendlyEncode (DList [DMap [("test",DInteger 123)],DList [DMap [("test2",DInteger 321)]], DMap [("abba", DList[DInteger 45, DInteger 178, DString "abc"]), ("daba", DMap [("col",DInteger 5)])]])) @?= Right (DList [DMap [("test",DInteger 123)],DList [DMap [("test2",DInteger 321)]], DMap [("abba", DList[DInteger 45, DInteger 178, DString "abc"]), ("daba", DMap [("col",DInteger 5)])]]),
+      testCase "GameStart" $
+        parseDocument (friendlyEncode (DMap [("number_of_hints",DInteger 10),("occupied_cols",DMap [("head",DInteger 0),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 0),("tail",DNull)])])])])])])])])])]),("occupied_rows",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 3),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 3),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 0),("tail",DMap [("head",DInteger 4),("tail",DNull)])])])])])])])])])]),("game_setup_id",DString "90bdd6f1-5302-4ba0-87d7-0f84b9657bc7")])) @?= Right (DMap [("number_of_hints",DInteger 10),("occupied_cols",DMap [("head",DInteger 0),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 0),("tail",DNull)])])])])])])])])])]),("occupied_rows",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 3),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 3),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 0),("tail",DMap [("head",DInteger 4),("tail",DNull)])])])])])])])])])]),("game_setup_id",DString "90bdd6f1-5302-4ba0-87d7-0f84b9657bc7")]),
       testCase "incorrect DNull" $
-        parseDocument "---\nnulll" @?= Right (DString "nulll"),
+        parseDocument "---\nnulll\n" @?= Right (DString "nulll"),
       testCase "incorrect EOF" $
         parseDocument "---\n-5\n\n" @?= Left "expected end of the document at char 7: ->\n",
       testCase "incorrect DString" $
-        parseDocument "---\na::b" @?= Left "expected end of the document at char 5: ->::b",
+        parseDocument "---\na::b" @?= Left "\n expected at char 8: -> ",
       testCase "incorrect DList" $
-        parseDocument "---\n-- 5 " @?= Left "expected end of the document at char 7: ->5 ",
+        parseDocument "---\n-- \n5 " @?= Left "expected end of the document at char 8: ->5 ",
       testCase "incorrect DMap" $
-        parseDocument "---\nmap:- a" @?= Left "expected end of the document at char 7: ->:- a"
+        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> "
   ]
+
+
 
 testCases :: [String]
 testCases = 
@@ -120,20 +136,20 @@ testCases =
     [
       "---",
       "- 1",
-      "  2",
-      "  3"
+      "- 2",
+      "- 3"
     ],
     unlines
     [
-      "- a",
-      "- a"
+      "- - a",
+      "- - a"
     ],
     unlines
     [
       "---",
       "- a",
-      "  1",
-      "  null"
+      "- 1",
+      "- null"
     ],
     unlines
     [
@@ -142,13 +158,13 @@ testCases =
     unlines
     [
       "---",
-      "- 1",
+      "- - 1",
       "  - - a",
       "    - b",
       "  - 2",
-      "  null ",
-      "  - c   ",
-      "- null  "
+      "  - null",
+      "  - c",
+      "- null"
     ],
     unlines
     [
@@ -158,22 +174,27 @@ testCases =
     unlines
     [
       "---",
-      "test1:  ",
-      "  tt:    ",
+      "test1:",
+      "  tt1:",
+      "    gggg: abc",
+      "    aa: aba",
+      "  tt2:",
       "    gggg: abc",
       "    aa: aba",
       "test2: 321"
     ],
+
     unlines
     [
-      "---",
-      "- test: 123",
-      "- - test2: 321",
-      "- abba: ",
-      "    45",
-      "    178",
-      "    abc",
-      "    col: 5"
+          "---",
+          "- test: 123",
+          "- - test2: 321",
+          "- abba:",
+          "  - 45",
+          "  - 178",
+          "  - abc",
+          "  daba:",
+          "    col: 5"
     ]
   ]
 

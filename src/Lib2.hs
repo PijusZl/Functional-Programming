@@ -40,11 +40,11 @@ renderDList [] _ = ""
 
 --without added indentation
 renderDList' :: [Document] -> String -> String
-renderDList' (DNull : xs) i = "- null\n" ++ renderDList xs i
-renderDList' (DString x : xs) i = "- " ++ x ++ "\n" ++ renderDList xs i
-renderDList' (DInteger x : xs) i = "- " ++ show x ++ "\n" ++ renderDList xs i
+renderDList' (DNull : xs) i = "null\n" ++ renderDList xs i
+renderDList' (DString x : xs) i = x ++ "\n" ++ renderDList xs i
+renderDList' (DInteger x : xs) i = show x ++ "\n" ++ renderDList xs i
 renderDList' (DList x : xs) i = "- " ++ renderDList' x (i ++ "  ") ++ renderDList xs i
-renderDList' (DMap x : xs) i = "- " ++ renderDMap' x (i ++ "  ") ++ renderDList xs i
+renderDList' (DMap x : xs) i = renderDMap' x (i ++ "  ") ++ renderDList xs i
 renderDList' [] _ = ""
 
 renderDMap :: [(String, Document)] -> String -> String
