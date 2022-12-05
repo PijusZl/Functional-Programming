@@ -213,15 +213,12 @@ toYamlTests =
     [ testCase "null" $
         renderDocument DNull 
           @?= "---\nnull",
-          testCase "frend" $
-        friendlyEncode (DList [DString " ",DMap [("g",DString " I"),("WpHdON",DMap [("Jq",DString "tG Jm "),("SunFSyki",DMap [])]),("vZMEdCvr",DMap [("wEtLfn",DString "8")]),("u",DList [DMap [("EU",DInteger 4),("EjUF",DList [DInteger (-2),DString " 927n E"]),("qK",DInteger (-6))],DString "Cf20"])],DInteger (-1),DList [DList []]])
-        @?= "-",
       testCase "int" $
-        renderDocument (DList [DString " ",DMap [("g",DString " I"),("WpHdON",DMap [("Jq",DString "tG Jm "),("SunFSyki",DMap [])]),("vZMEdCvr",DMap [("wEtLfn",DString "8")]),("u",DList [DMap [("EU",DInteger 4),("EjUF",DList [DInteger (-2),DString " 927n E"]),("qK",DInteger (-6))],DString "Cf20"])],DInteger (-1),DList [DList []]]) 
+        renderDocument (DInteger 5) 
           @?= "---\n5\n",
       testCase "string" $
-        renderDocument (DString " k") 
-          @?= "'test' ",
+        renderDocument (DString "test ") 
+          @?= "'test '\n",
       testCase "empty list" $
         renderDocument (DList []) 
           @?= "[]\n",
@@ -244,16 +241,16 @@ toYamlTests =
         renderDocument (DList [DString "test", DString "test", DInteger 7])
           @?= unlines
             [ "---",
-              "- test",
-              "- test",
+              "- 'test'",
+              "- 'test'",
               "- 7"
             ],
       testCase "list of strings" $
         renderDocument (DList [DString "test", DString "test"])
           @?= unlines
             [ "---",
-              "- test",
-              "- test"
+              "- 'test'",
+              "- 'test'"
             ],
       testCase "Nested lists" $
         renderDocument (DList[DList[DList[DInteger 5, DInteger 6], DList[DList[DString "test", DString "test"] , DInteger 7, DInteger 8]], DNull])
@@ -261,8 +258,8 @@ toYamlTests =
             [ "---",
               "- - - 5",
               "    - 6",
-              "  - - - test",
-              "      - test",
+              "  - - - 'test'",
+              "      - 'test'",
               "    - 7",
               "    - 8",
               "- null"
@@ -271,42 +268,23 @@ toYamlTests =
         renderDocument (DMap [("coords", DList [DMap [("col", DInteger 7), ("row", DInteger 7)], DMap [("col", DInteger 7), ("row", DInteger 7)]])])
           @?= unlines
             [ "---",
-              "coords:",
-              "  - col: 7",
-              "    row: 7",
-              "  - col: 7",
-              "    row: 7"
+            "'coords':",
+            "- 'col': 7",
+            "  'row': 7",
+            "- 'col': 7",
+            "  'row': 7"
             ],
       testCase "DMap with nested lists" $
         renderDocument (DMap [("coords", DList [DMap [("col", DList [DInteger 2, DInteger 2]), ("row", DInteger 7)], DMap [("col", DInteger 7), ("row", DNull)]])])
           @?= unlines
             [ "---",
-              "coords:",
-              "  - col:",
-              "      - 2",
-              "      - 2",
-              "    row: 7",
-              "  - col: 7",
-              "    row: null"
-            ],
-      testCase "DMap with nested lists of lists" $
-        renderDocument (DMap [("coords", DList [DMap [("col", DList [DInteger 2, DInteger 2]), ("row", DInteger 7)], DList [DList[DList[DInteger 5, DInteger 6], DList[DList[DString "test", DString "test"] , DInteger 7, DInteger 8]], DNull], DMap [("col", DInteger 7), ("row", DNull)]])])
-          @?= unlines
-            [ "---",
-              "coords:",
-              "  - col:",
-              "      - 2",
-              "      - 2",
-              "    row: 7",
-              "  - - - - 5",
-              "        - 6",
-              "      - - - test",
-              "          - test",
-              "        - 7",
-              "        - 8",
-              "    - null",
-              "  - col: 7",
-              "    row: null"
+            "'coords':",
+            "- 'col':",
+            "  - 2",
+            "  - 2",
+            "  'row': 7",
+            "- 'col': 7",
+            "  'row': null"
             ]
     ]
 
