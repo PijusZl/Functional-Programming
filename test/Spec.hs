@@ -95,7 +95,15 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "incorrect DList" $
         parseDocument "---\n-- \n5 " @?= Left "expected end of the document at char 8: ->5 ",
       testCase "incorrect DMap" $
-        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> "
+        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
+      testCase "incorrect DMap" $
+        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
+      testCase "incorrect DMap" $
+        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
+      testCase "incorrect DMap" $
+        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
+      testCase "check if fails" $
+        parseDocument (renderDocument(DMap [("LW",DMap [("I",DList [])]),("C",DMap [])])) @?= Right (DMap [("LW",DMap [("I",DList [])]),("C",DMap [])])
   ]
 
 
@@ -207,13 +215,13 @@ toYamlTests =
           @?= "---\nnull",
       testCase "int" $
         renderDocument (DInteger 5) 
-          @?= "---\n5",
+          @?= "---\n5\n",
       testCase "string" $
-        renderDocument (DString "test") 
-          @?= "---\ntest",
+        renderDocument (DString "test ") 
+          @?= "'test '\n",
       testCase "empty list" $
         renderDocument (DList []) 
-          @?= "---\n- ",
+          @?= "[]\n",
       testCase "list of ints" $
         renderDocument (DList [DInteger 5, DInteger 6]) 
           @?= unlines
@@ -233,16 +241,16 @@ toYamlTests =
         renderDocument (DList [DString "test", DString "test", DInteger 7])
           @?= unlines
             [ "---",
-              "- test",
-              "- test",
+              "- 'test'",
+              "- 'test'",
               "- 7"
             ],
       testCase "list of strings" $
         renderDocument (DList [DString "test", DString "test"])
           @?= unlines
             [ "---",
-              "- test",
-              "- test"
+              "- 'test'",
+              "- 'test'"
             ],
       testCase "Nested lists" $
         renderDocument (DList[DList[DList[DInteger 5, DInteger 6], DList[DList[DString "test", DString "test"] , DInteger 7, DInteger 8]], DNull])
@@ -250,8 +258,8 @@ toYamlTests =
             [ "---",
               "- - - 5",
               "    - 6",
-              "  - - - test",
-              "      - test",
+              "  - - - 'test'",
+              "      - 'test'",
               "    - 7",
               "    - 8",
               "- null"
@@ -260,42 +268,23 @@ toYamlTests =
         renderDocument (DMap [("coords", DList [DMap [("col", DInteger 7), ("row", DInteger 7)], DMap [("col", DInteger 7), ("row", DInteger 7)]])])
           @?= unlines
             [ "---",
-              "coords:",
-              "  - col: 7",
-              "    row: 7",
-              "  - col: 7",
-              "    row: 7"
+            "'coords':",
+            "- 'col': 7",
+            "  'row': 7",
+            "- 'col': 7",
+            "  'row': 7"
             ],
       testCase "DMap with nested lists" $
         renderDocument (DMap [("coords", DList [DMap [("col", DList [DInteger 2, DInteger 2]), ("row", DInteger 7)], DMap [("col", DInteger 7), ("row", DNull)]])])
           @?= unlines
             [ "---",
-              "coords:",
-              "  - col:",
-              "      - 2",
-              "      - 2",
-              "    row: 7",
-              "  - col: 7",
-              "    row: null"
-            ],
-      testCase "DMap with nested lists of lists" $
-        renderDocument (DMap [("coords", DList [DMap [("col", DList [DInteger 2, DInteger 2]), ("row", DInteger 7)], DList [DList[DList[DInteger 5, DInteger 6], DList[DList[DString "test", DString "test"] , DInteger 7, DInteger 8]], DNull], DMap [("col", DInteger 7), ("row", DNull)]])])
-          @?= unlines
-            [ "---",
-              "coords:",
-              "  - col:",
-              "      - 2",
-              "      - 2",
-              "    row: 7",
-              "  - - - - 5",
-              "        - 6",
-              "      - - - test",
-              "          - test",
-              "        - 7",
-              "        - 8",
-              "    - null",
-              "  - col: 7",
-              "    row: null"
+            "'coords':",
+            "- 'col':",
+            "  - 2",
+            "  - 2",
+            "  'row': 7",
+            "- 'col': 7",
+            "  'row': null"
             ]
     ]
 
