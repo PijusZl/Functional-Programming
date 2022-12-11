@@ -45,8 +45,6 @@ fromYamlTests = testGroup "Document from yaml"
         DMap[("t1",DInteger 1), ("t2",DInteger 2)] @?= DMap[("t2",DInteger 2), ("t1",DInteger 1)],
       testCase "error string" $
         friendlyEncode (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")]) @?= "ID: -2\nwU:\n- 4np\nf: u4 t\n",
-      testCase "error" $
-        parseDocument (friendlyEncode (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")])) @?= Right (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")]),
       testCase "empty" $
         parseDocument "" @?= Right DNull,
       testCase "empty after start" $
@@ -80,9 +78,8 @@ fromYamlTests = testGroup "Document from yaml"
       testCase "simple map" $
         parseDocument (testCases !! 11) @?= Right (DMap[("test", DString "ds")]),
       testCase "list in map" $
-        parseDocument (friendlyEncode (DMap [("test1", DMap[("tt1", DMap[("gggg", DString "abc"), ("aa", DString "aba")]), ("tt2", DMap[("gggg", DString "abc"), ("aa", DString "aba")])])])) @?= Right (DMap [("test1", DMap[("tt1", DMap[("gggg", DString "abc"), ("aa", DString "aba")]), ("tt2", DMap[("gggg", DString "abc"), ("aa", DString "aba")])])]), -- ("test2", DInteger 321)
+        parseDocument (friendlyEncode (DMap [("test1", DMap[("tt1", DMap[("gggg", DString "abc"), ("aa", DString "aba")]), ("tt2", DMap[("gggg", DString "abc"), ("aa", DString "aba")])])])) @?= Right (DMap [("test1", DMap[("tt1", DMap[("gggg", DString "abc"), ("aa", DString "aba")]), ("tt2", DMap[("gggg", DString "abc"), ("aa", DString "aba")])])]),
       testCase "nested all types" $
-        -- parseDocument (testCases !! 13) @?= Right (DList [DList [DMap [("test",DInteger 123)]],DList [DList [DMap [("test2",DInteger 321)]]],DList [DMap [("abba",DList [DInteger 45,DInteger 178,DString "abc",DMap [("col",DInteger 5)]])]]]),
         parseDocument (friendlyEncode (DList [DMap [("test",DInteger 123)],DList [DMap [("test2",DInteger 321)]], DMap [("abba", DList[DInteger 45, DInteger 178, DString "abc"]), ("daba", DMap [("col",DInteger 5)])]])) @?= Right (DList [DMap [("test",DInteger 123)],DList [DMap [("test2",DInteger 321)]], DMap [("abba", DList[DInteger 45, DInteger 178, DString "abc"]), ("daba", DMap [("col",DInteger 5)])]]),
       testCase "GameStart" $
         parseDocument (friendlyEncode (DMap [("number_of_hints",DInteger 10),("occupied_cols",DMap [("head",DInteger 0),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 0),("tail",DNull)])])])])])])])])])]),("occupied_rows",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 3),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 3),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 0),("tail",DMap [("head",DInteger 4),("tail",DNull)])])])])])])])])])]),("game_setup_id",DString "90bdd6f1-5302-4ba0-87d7-0f84b9657bc7")])) @?= Right (DMap [("number_of_hints",DInteger 10),("occupied_cols",DMap [("head",DInteger 0),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 0),("tail",DNull)])])])])])])])])])]),("occupied_rows",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 3),("tail",DMap [("head",DInteger 2),("tail",DMap [("head",DInteger 3),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 4),("tail",DMap [("head",DInteger 1),("tail",DMap [("head",DInteger 0),("tail",DMap [("head",DInteger 4),("tail",DNull)])])])])])])])])])]),("game_setup_id",DString "90bdd6f1-5302-4ba0-87d7-0f84b9657bc7")]),
@@ -94,12 +91,6 @@ fromYamlTests = testGroup "Document from yaml"
         parseDocument "---\na::b" @?= Left "\n expected at char 8: -> ",
       testCase "incorrect DList" $
         parseDocument "---\n-- \n5 " @?= Left "expected end of the document at char 8: ->5 ",
-      testCase "incorrect DMap" $
-        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
-      testCase "incorrect DMap" $
-        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
-      testCase "incorrect DMap" $
-        parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
       testCase "incorrect DMap" $
         parseDocument "---\nmap:- a" @?= Left "\n expected at char 11: -> ",
       testCase "check if fails" $

@@ -103,12 +103,23 @@ arbitraryDMap :: Gen Document
 arbitraryDMap = do
     s <- getSize
     n <- choose (0, min 4 s)
-    DMap <$> vectorOf n ((,) <$> arbitraryK <*> arbitraryDocument)
+    DMap . checkForSameKey <$> vectorOf n ((,) <$> arbitraryK <*> arbitraryDocument)
     where
         arbitraryK = do
             s <- getSize
             n <- choose (1, min 10 s)
             vectorOf n (oneof [arbitraryUpper, arbitraryLower])
+
+checkForSameKey :: [(String, Document)] -> [(String, Document)]
+checkForSameKey ((key, x) : xs) =
+    if searchKey key xs
+        then checkForSameKey xs
+        else (key, x) : checkForSameKey xs
+checkForSameKey [] = []
+
+searchKey :: String -> [(String, Document)] -> Bool
+searchKey str ((key, _) : xs) = (str == key) || searchKey str xs
+searchKey _ [] = False
 
 class ToDocument a where
     toDocument :: a -> Document
