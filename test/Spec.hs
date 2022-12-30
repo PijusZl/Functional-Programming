@@ -40,11 +40,7 @@ dogfood = testGroup "Eating your own dogfood"
 
 fromYamlTests :: TestTree
 fromYamlTests = testGroup "Document from yaml"
-  [   
-      testCase "check equality" $
-        DMap[("t1",DInteger 1), ("t2",DInteger 2)] @?= DMap[("t2",DInteger 2), ("t1",DInteger 1)],
-      testCase "error string" $
-        friendlyEncode (DMap [("wU",DList [DString "4np"]),("f",DInteger 3),("ID",DInteger (-2)),("f",DString "u4 t")]) @?= "ID: -2\nwU:\n- 4np\nf: u4 t\n",
+  [
       testCase "empty" $
         parseDocument "" @?= Right DNull,
       testCase "empty after start" $
